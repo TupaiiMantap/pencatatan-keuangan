@@ -1,0 +1,2084 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FinansialKu - Pencatatan Keuangan Pintar & Interaktif</title>
+  <meta name="description" content="Aplikasi pencatatan keuangan harian, bulanan, dan tahunan yang interaktif, modern, dan mudah digunakan dengan grafik analitik lengkap." />
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+            },
+            income: {
+              light: '#10b981',
+              DEFAULT: '#059669',
+              dark: '#047857'
+            },
+            expense: {
+              light: '#f43f5e',
+              DEFAULT: '#e11d48',
+              dark: '#be123c'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React & ReactDOM CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- Babel Standalone for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* Custom Scrollbar & Print Styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    .dark ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.7);
+    }
+    
+    @media print {
+      body {
+        background: white !important;
+        color: black !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-shadow-none {
+        box-shadow: none !important;
+        border: 1px solid #e2e8f0 !important;
+      }
+    }
+
+    .glass-card {
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-200 antialiased selection:bg-emerald-500 selection:text-white">
+  <div id="root"></div>
+
+  <!-- Main Application Script -->
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // --- UTILITY FORMATTERS ---
+    const formatIDR = (number) => {
+      const val = Number(number) || 0;
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(val);
+    };
+
+    const formatDateID = (dateStr) => {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr);
+      return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      }).format(d);
+    };
+
+    const formatDateTimeID = (dateStr) => {
+      if (!dateStr) return '-';
+      const d = new Date(dateStr);
+      return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(d);
+    };
+
+    // --- ICONS (SVG Modern Components) ---
+    const IconWallet = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+      </svg>
+    );
+
+    const IconTrendingUp = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+      </svg>
+    );
+
+    const IconTrendingDown = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+      </svg>
+    );
+
+    const IconPlus = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      </svg>
+    );
+
+    const IconEdit = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      </svg>
+    );
+
+    const IconTrash = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+    );
+
+    const IconDownload = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      </svg>
+    );
+
+    const IconPrinter = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4H7v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+      </svg>
+    );
+
+    const IconSun = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+    );
+
+    const IconMoon = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+      </svg>
+    );
+
+    const IconPieChart = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+      </svg>
+    );
+
+    const IconBarChart = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    );
+
+    const IconSearch = ({ className = "w-4 h-4" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+    );
+
+    const IconAlertTriangle = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    );
+
+    const IconCheckCircle = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    );
+
+    const IconTarget = ({ className = "w-5 h-5" }) => (
+      <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <circle cx="12" cy="12" r="10" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="12" cy="12" r="6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="12" cy="12" r="2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    );
+
+    // --- DEFAULT CATEGORIES & SAMPLE DATA ---
+    const DEFAULT_CATEGORIES = {
+      income: ['Gaji', 'Freelance & Bisnis', 'Investasi', 'Hadiah / Bonus', 'Lain-lain'],
+      expense: ['Makanan & Minuman', 'Transportasi', 'Tagihan & Utilitas', 'Belanja', 'Hiburan', 'Kesehatan', 'Pendidikan', 'Lain-lain']
+    };
+
+    const DEFAULT_PAYMENT_METHODS = ['Tunai (Cash)', 'Transfer Bank', 'E-Wallet (GoPay/OVO/Dana)', 'Kartu Kredit'];
+
+    const DEFAULT_BUDGETS = {
+      'Makanan & Minuman': 2500000,
+      'Transportasi': 800000,
+      'Tagihan & Utilitas': 1500000,
+      'Belanja': 1000000,
+      'Hiburan': 500000
+    };
+
+    const SAMPLE_TRANSACTIONS = [
+      {
+        id: 'tx-1',
+        type: 'income',
+        amount: 8500000,
+        date: new Date(Date.now() - 5 * 86400000).toISOString().split('T')[0],
+        time: '09:00',
+        category: 'Gaji',
+        paymentMethod: 'Transfer Bank',
+        cycle: 'Bulanan',
+        notes: 'Gaji bulanan utama'
+      },
+      {
+        id: 'tx-2',
+        type: 'income',
+        amount: 2200000,
+        date: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0],
+        time: '14:30',
+        category: 'Freelance & Bisnis',
+        paymentMethod: 'Transfer Bank',
+        cycle: 'Sekali Jalan',
+        notes: 'Pembayaran project landing page'
+      },
+      {
+        id: 'tx-3',
+        type: 'expense',
+        amount: 1450000,
+        date: new Date(Date.now() - 4 * 86400000).toISOString().split('T')[0],
+        time: '19:15',
+        category: 'Belanja',
+        paymentMethod: 'Transfer Bank',
+        cycle: 'Sekali Jalan',
+        notes: 'Belanja bulanan sembako dan kebutuhan rumah'
+      },
+      {
+        id: 'tx-4',
+        type: 'expense',
+        amount: 850000,
+        date: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0],
+        time: '10:00',
+        category: 'Tagihan & Utilitas',
+        paymentMethod: 'Transfer Bank',
+        cycle: 'Bulanan',
+        notes: 'Bayar Listrik PLN dan WiFi IndiHome'
+      },
+      {
+        id: 'tx-5',
+        type: 'expense',
+        amount: 320000,
+        date: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0],
+        time: '12:30',
+        category: 'Makanan & Minuman',
+        paymentMethod: 'E-Wallet (GoPay/OVO/Dana)',
+        cycle: 'Sekali Jalan',
+        notes: 'Makan siang traktiran rekan kerja'
+      },
+      {
+        id: 'tx-6',
+        type: 'expense',
+        amount: 150000,
+        date: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0],
+        time: '08:15',
+        category: 'Transportasi',
+        paymentMethod: 'E-Wallet (GoPay/OVO/Dana)',
+        cycle: 'Mingguan',
+        notes: 'Isi bensin motor & saldo e-Toll'
+      },
+      {
+        id: 'tx-7',
+        type: 'expense',
+        amount: 250000,
+        date: new Date().toISOString().split('T')[0],
+        time: '20:00',
+        category: 'Hiburan',
+        paymentMethod: 'Kartu Kredit',
+        cycle: 'Sekali Jalan',
+        notes: 'Tiket nonton bioskop + popcorn'
+      },
+      {
+        id: 'tx-8',
+        type: 'expense',
+        amount: 45000,
+        date: new Date().toISOString().split('T')[0],
+        time: '15:20',
+        category: 'Makanan & Minuman',
+        paymentMethod: 'Tunai (Cash)',
+        cycle: 'Sekali Jalan',
+        notes: 'Kopi sore dan roti bakar'
+      }
+    ];
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      // LocalStorage States
+      const [transactions, setTransactions] = useState(() => {
+        const saved = localStorage.getItem('finansialku_transactions_v2');
+        return saved ? JSON.parse(saved) : SAMPLE_TRANSACTIONS;
+      });
+
+      const [categories, setCategories] = useState(() => {
+        const saved = localStorage.getItem('finansialku_categories_v2');
+        return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+      });
+
+      const [budgets, setBudgets] = useState(() => {
+        const saved = localStorage.getItem('finansialku_budgets_v2');
+        return saved ? JSON.parse(saved) : DEFAULT_BUDGETS;
+      });
+
+      const [darkMode, setDarkMode] = useState(() => {
+        const saved = localStorage.getItem('finansialku_dark_mode');
+        return saved ? JSON.parse(saved) : false;
+      });
+
+      // Filter States
+      const today = new Date();
+      const [filterPeriod, setFilterPeriod] = useState('monthly'); // 'all' | 'daily' | 'monthly' | 'yearly'
+      const [selectedDate, setSelectedDate] = useState(today.toISOString().split('T')[0]);
+      const [selectedMonth, setSelectedMonth] = useState(today.getMonth()); // 0-11
+      const [selectedYear, setSelectedYear] = useState(today.getFullYear());
+
+      // Search & Table Controls
+      const [searchQuery, setSearchQuery] = useState('');
+      const [typeFilter, setTypeFilter] = useState('all'); // 'all' | 'income' | 'expense'
+      const [categoryFilter, setCategoryFilter] = useState('all');
+      const [sortBy, setSortBy] = useState('date-desc'); // date-desc, date-asc, amount-desc, amount-asc
+
+      // Modals
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
+      const [editingTx, setEditingTx] = useState(null);
+      const [toastMsg, setToastMsg] = useState(null);
+
+      // Tab View (Dashboard vs Transactions vs Budgeting)
+      const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard' | 'transactions' | 'budgets'
+
+      // Synchronize Dark Mode to <html> class
+      useEffect(() => {
+        if (darkMode) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('finansialku_dark_mode', JSON.stringify(darkMode));
+      }, [darkMode]);
+
+      // Save to localStorage
+      useEffect(() => {
+        localStorage.setItem('finansialku_transactions_v2', JSON.stringify(transactions));
+      }, [transactions]);
+
+      useEffect(() => {
+        localStorage.setItem('finansialku_categories_v2', JSON.stringify(categories));
+      }, [categories]);
+
+      useEffect(() => {
+        localStorage.setItem('finansialku_budgets_v2', JSON.stringify(budgets));
+      }, [budgets]);
+
+      const showToast = (message, type = 'success') => {
+        setToastMsg({ message, type });
+        setTimeout(() => setToastMsg(null), 3500);
+      };
+
+      // Filtered Transactions based on Period Filter
+      const periodFilteredTransactions = useMemo(() => {
+        return transactions.filter(tx => {
+          if (!tx.date) return false;
+          const [y, m, d] = tx.date.split('-').map(Number);
+          
+          if (filterPeriod === 'daily') {
+            return tx.date === selectedDate;
+          } else if (filterPeriod === 'monthly') {
+            return y === Number(selectedYear) && (m - 1) === Number(selectedMonth);
+          } else if (filterPeriod === 'yearly') {
+            return y === Number(selectedYear);
+          }
+          return true; // 'all'
+        });
+      }, [transactions, filterPeriod, selectedDate, selectedMonth, selectedYear]);
+
+      // Financial Metrics for current period
+      const metrics = useMemo(() => {
+        let totalIncome = 0;
+        let totalExpense = 0;
+
+        periodFilteredTransactions.forEach(tx => {
+          const amt = Number(tx.amount) || 0;
+          if (tx.type === 'income') {
+            totalIncome += amt;
+          } else {
+            totalExpense += amt;
+          }
+        });
+
+        const netBalance = totalIncome - totalExpense;
+        const expenseRatio = totalIncome > 0 ? (totalExpense / totalIncome) * 100 : (totalExpense > 0 ? 100 : 0);
+
+        let healthStatus = 'Sangat Sehat';
+        let healthColor = 'text-emerald-500';
+        let healthBadge = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
+        let healthAdvice = 'Arus kas Anda prima. Pertahankan konsistensi menabung dan investasi!';
+
+        if (totalIncome === 0 && totalExpense > 0) {
+          healthStatus = 'Defisit (Tanpa Pemasukan)';
+          healthColor = 'text-rose-600';
+          healthBadge = 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800';
+          healthAdvice = 'Perhatian: Ada pengeluaran tanpa pemasukan tercatat pada periode ini.';
+        } else if (expenseRatio > 100) {
+          healthStatus = 'Defisit (Bahaya)';
+          healthColor = 'text-rose-600';
+          healthBadge = 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800';
+          healthAdvice = `Pengeluaran melebihi pemasukan sebesar ${formatIDR(Math.abs(netBalance))}. Pangkas pos belanja yang tidak genting!`;
+        } else if (expenseRatio >= 80) {
+          healthStatus = 'Waspada / Kritis';
+          healthColor = 'text-amber-500';
+          healthBadge = 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800';
+          healthAdvice = 'Pengeluaran mendekati 80%+ dari pemasukan. Batasi pengeluaran hiburan dan konsumtif.';
+        } else if (expenseRatio >= 50) {
+          healthStatus = 'Aman & Seimbang';
+          healthColor = 'text-blue-500';
+          healthBadge = 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800';
+          healthAdvice = 'Kondisi finansial Anda seimbang (50-80% pengeluaran). Alokasikan sisa saldo ke dana darurat.';
+        }
+
+        return {
+          totalIncome,
+          totalExpense,
+          netBalance,
+          expenseRatio: Math.min(Math.round(expenseRatio), 100),
+          actualRatio: Math.round(expenseRatio * 10) / 10,
+          healthStatus,
+          healthColor,
+          healthBadge,
+          healthAdvice
+        };
+      }, [periodFilteredTransactions]);
+
+      // Category Spending for Budget checks & Pie Chart
+      const categorySpending = useMemo(() => {
+        const spending = {};
+        periodFilteredTransactions
+          .filter(tx => tx.type === 'expense')
+          .forEach(tx => {
+            const cat = tx.category || 'Lain-lain';
+            spending[cat] = (spending[cat] || 0) + Number(tx.amount);
+          });
+        return spending;
+      }, [periodFilteredTransactions]);
+
+      // Table & Search Filtered Transactions
+      const tableTransactions = useMemo(() => {
+        let list = [...periodFilteredTransactions];
+
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          list = list.filter(tx => 
+            (tx.notes && tx.notes.toLowerCase().includes(q)) ||
+            (tx.category && tx.category.toLowerCase().includes(q)) ||
+            (tx.paymentMethod && tx.paymentMethod.toLowerCase().includes(q)) ||
+            tx.amount.toString().includes(q)
+          );
+        }
+
+        if (typeFilter !== 'all') {
+          list = list.filter(tx => tx.type === typeFilter);
+        }
+
+        if (categoryFilter !== 'all') {
+          list = list.filter(tx => tx.category === categoryFilter);
+        }
+
+        list.sort((a, b) => {
+          if (sortBy === 'date-desc') {
+            return new Date(b.date + ' ' + (b.time || '00:00')) - new Date(a.date + ' ' + (a.time || '00:00'));
+          } else if (sortBy === 'date-asc') {
+            return new Date(a.date + ' ' + (a.time || '00:00')) - new Date(b.date + ' ' + (b.time || '00:00'));
+          } else if (sortBy === 'amount-desc') {
+            return Number(b.amount) - Number(a.amount);
+          } else if (sortBy === 'amount-asc') {
+            return Number(a.amount) - Number(b.amount);
+          }
+          return 0;
+        });
+
+        return list;
+      }, [periodFilteredTransactions, searchQuery, typeFilter, categoryFilter, sortBy]);
+
+      // Handler for Adding / Editing Transaction
+      const handleSaveTransaction = (formData) => {
+        if (editingTx) {
+          setTransactions(prev => prev.map(t => t.id === editingTx.id ? { ...formData, id: editingTx.id } : t));
+          showToast('Transaksi berhasil diperbarui');
+        } else {
+          const newTx = {
+            ...formData,
+            id: 'tx-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4)
+          };
+          setTransactions(prev => [newTx, ...prev]);
+          showToast('Transaksi baru berhasil ditambahkan');
+        }
+        setIsModalOpen(false);
+        setEditingTx(null);
+      };
+
+      const handleDeleteTransaction = (id) => {
+        if (window.confirm('Apakah Anda yakin ingin menghapus transaksi ini?')) {
+          setTransactions(prev => prev.filter(t => t.id !== id));
+          showToast('Transaksi telah dihapus', 'error');
+        }
+      };
+
+      const handleResetSample = () => {
+        if (window.confirm('Reset data ke contoh bawaan awal? Data Anda saat ini akan ditimpa.')) {
+          setTransactions(SAMPLE_TRANSACTIONS);
+          setBudgets(DEFAULT_BUDGETS);
+          setCategories(DEFAULT_CATEGORIES);
+          showToast('Data berhasil direset ke contoh bawaan');
+        }
+      };
+
+      // Export CSV
+      const handleExportCSV = () => {
+        if (tableTransactions.length === 0) {
+          alert('Tidak ada data transaksi untuk diekspor!');
+          return;
+        }
+
+        const headers = ['ID', 'Tipe', 'Tanggal', 'Waktu', 'Kategori', 'Nominal (IDR)', 'Metode Pembayaran', 'Siklus', 'Keterangan'];
+        const rows = tableTransactions.map(t => [
+          t.id,
+          t.type === 'income' ? 'Pemasukan' : 'Pengeluaran',
+          t.date,
+          t.time || '',
+          `"${(t.category || '').replace(/"/g, '""')}"`,
+          t.amount,
+          `"${(t.paymentMethod || '').replace(/"/g, '""')}"`,
+          `"${(t.cycle || 'Sekali Jalan').replace(/"/g, '""')}"`,
+          `"${(t.notes || '').replace(/"/g, '""')}"`
+        ]);
+
+        const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `Laporan_Keuangan_FinansialKu_${filterPeriod}_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('Data berhasil diekspor ke file CSV');
+      };
+
+      // Export & Import JSON Backup
+      const handleExportJSON = () => {
+        const backupData = {
+          version: '2.0',
+          exportedAt: new Date().toISOString(),
+          transactions,
+          budgets,
+          categories
+        };
+        const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(backupData, null, 2));
+        const dlAnchor = document.createElement('a');
+        dlAnchor.setAttribute('href', dataStr);
+        dlAnchor.setAttribute('download', `FinansialKu_Backup_${new Date().toISOString().split('T')[0]}.json`);
+        dlAnchor.click();
+        showToast('Cadangan JSON berhasil diunduh');
+      };
+
+      const handleImportJSON = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            if (Array.isArray(data.transactions)) {
+              setTransactions(data.transactions);
+              if (data.budgets) setBudgets(data.budgets);
+              if (data.categories) setCategories(data.categories);
+              showToast('Data berhasil dipulihkan dari cadangan!');
+            } else {
+              alert('Format file JSON tidak sesuai struktur data FinansialKu.');
+            }
+          } catch (err) {
+            alert('Gagal membaca file JSON: ' + err.message);
+          }
+        };
+        reader.readAsText(file);
+      };
+
+      // Months array in Indonesian
+      const monthNames = [
+        'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+
+      return (
+        <div className="flex flex-col min-h-screen">
+          {/* TOAST ALERT */}
+          {toastMsg && (
+            <div className="fixed bottom-5 right-5 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 animate-bounce">
+              <span className={`w-3 h-3 rounded-full ${toastMsg.type === 'error' ? 'bg-rose-500' : 'bg-emerald-500'}`}></span>
+              <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{toastMsg.message}</p>
+            </div>
+          )}
+
+          {/* NAVBAR */}
+          <header className="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 no-print transition-colors">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16">
+                
+                {/* Brand Logo & Name */}
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                    <IconWallet className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
+                      FinansialKu
+                    </h1>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Catatan Keuangan Cerdas</p>
+                  </div>
+                </div>
+
+                {/* Navigation Pills */}
+                <nav className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-xl">
+                  <button
+                    onClick={() => setCurrentView('dashboard')}
+                    className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                      currentView === 'dashboard'
+                        ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    Dashboard & Grafik
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('transactions')}
+                    className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                      currentView === 'transactions'
+                        ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    Riwayat Transaksi
+                  </button>
+                  <button
+                    onClick={() => setCurrentView('budgets')}
+                    className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                      currentView === 'budgets'
+                        ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                    }`}
+                  >
+                    Anggaran (Budget)
+                  </button>
+                </nav>
+
+                {/* Actions: Add Transaction & Theme Switcher */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setEditingTx(null); setIsModalOpen(true); }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 active:scale-95 rounded-xl shadow-md shadow-emerald-600/20 transition-all"
+                  >
+                    <IconPlus className="w-4 h-4" />
+                    <span>Catat Transaksi</span>
+                  </button>
+
+                  <button
+                    onClick={() => setDarkMode(!darkMode)}
+                    title={darkMode ? "Ubah ke Mode Terang" : "Ubah ke Mode Gelap"}
+                    className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    {darkMode ? <IconSun className="w-5 h-5 text-amber-400" /> : <IconMoon className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Mobile Navigation Row */}
+              <div className="flex md:hidden items-center justify-around py-2 border-t border-slate-200 dark:border-slate-800 text-xs font-semibold">
+                <button
+                  onClick={() => setCurrentView('dashboard')}
+                  className={`py-1 px-3 rounded-lg ${currentView === 'dashboard' ? 'text-emerald-600 font-bold bg-emerald-50 dark:bg-slate-800' : 'text-slate-500'}`}
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => setCurrentView('transactions')}
+                  className={`py-1 px-3 rounded-lg ${currentView === 'transactions' ? 'text-emerald-600 font-bold bg-emerald-50 dark:bg-slate-800' : 'text-slate-500'}`}
+                >
+                  Riwayat ({tableTransactions.length})
+                </button>
+                <button
+                  onClick={() => setCurrentView('budgets')}
+                  className={`py-1 px-3 rounded-lg ${currentView === 'budgets' ? 'text-emerald-600 font-bold bg-emerald-50 dark:bg-slate-800' : 'text-slate-500'}`}
+                >
+                  Anggaran
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* MAIN CONTAINER */}
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+            {/* TIME FILTER & CONTROLS BAR */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm no-print">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                
+                {/* Period Selector Tabs */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mr-1">
+                    Periode:
+                  </span>
+                  {[
+                    { id: 'all', label: 'Semua Waktu' },
+                    { id: 'daily', label: 'Harian' },
+                    { id: 'monthly', label: 'Bulanan' },
+                    { id: 'yearly', label: 'Tahunan' },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setFilterPeriod(tab.id)}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
+                        filterPeriod === tab.id
+                          ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                          : 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Specific Date / Month / Year Picker based on Active Period */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {filterPeriod === 'daily' && (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                      <button
+                        onClick={() => setSelectedDate(today.toISOString().split('T')[0])}
+                        className="px-2.5 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300"
+                      >
+                        Hari Ini
+                      </button>
+                    </div>
+                  )}
+
+                  {filterPeriod === 'monthly' && (
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={selectedMonth}
+                        onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        {monthNames.map((name, idx) => (
+                          <option key={idx} value={idx}>{name}</option>
+                        ))}
+                      </select>
+                      <select
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(Number(e.target.value))}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        {[2024, 2025, 2026, 2027].map((yr) => (
+                          <option key={yr} value={yr}>{yr}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {filterPeriod === 'yearly' && (
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={selectedYear}
+                        onChange={(e) => setSelectedYear(Number(e.target.value))}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        {[2024, 2025, 2026, 2027].map((yr) => (
+                          <option key={yr} value={yr}>Tahun {yr}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Actions & Utilities Dropdown / Buttons */}
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <button
+                      onClick={handleExportCSV}
+                      title="Ekspor data ke file CSV (Excel)"
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200 transition-colors"
+                    >
+                      <IconDownload className="w-3.5 h-3.5" />
+                      <span>CSV</span>
+                    </button>
+                    <button
+                      onClick={() => window.print()}
+                      title="Cetak Laporan / Simpan PDF"
+                      className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200 transition-colors"
+                    >
+                      <IconPrinter className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Cetak PDF</span>
+                    </button>
+                    <button
+                      onClick={handleExportJSON}
+                      title="Cadangkan data ke file JSON"
+                      className="px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                    >
+                      Backup
+                    </button>
+                    <label
+                      title="Pulihkan data dari cadangan JSON"
+                      className="px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      Restore
+                      <input type="file" accept=".json" onChange={handleImportJSON} className="hidden" />
+                    </label>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* SUMMARY METRIC CARDS */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              
+              {/* Card 1: Pemasukan */}
+              <div className="relative overflow-hidden bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    Total Pemasukan
+                  </span>
+                  <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                    <IconTrendingUp className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">
+                    {formatIDR(metrics.totalIncome)}
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    {periodFilteredTransactions.filter(t => t.type === 'income').length} transaksi masuk
+                  </p>
+                </div>
+                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full -mr-8 -mt-8 pointer-events-none"></div>
+              </div>
+
+              {/* Card 2: Pengeluaran */}
+              <div className="relative overflow-hidden bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                    Total Pengeluaran
+                  </span>
+                  <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+                    <IconTrendingDown className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <div className="text-2xl font-extrabold text-slate-900 dark:text-slate-50 tracking-tight">
+                    {formatIDR(metrics.totalExpense)}
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    {periodFilteredTransactions.filter(t => t.type === 'expense').length} transaksi keluar
+                  </p>
+                </div>
+                <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full -mr-8 -mt-8 pointer-events-none"></div>
+              </div>
+
+              {/* Card 3: Sisa Saldo Netto */}
+              <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-900 dark:to-slate-950 border border-slate-800 rounded-2xl p-5 shadow-lg text-white">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-teal-300">
+                    Sisa Saldo Kas
+                  </span>
+                  <div className="p-2 rounded-xl bg-white/10 text-teal-300 backdrop-blur-sm">
+                    <IconWallet className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <div className={`text-2xl font-extrabold tracking-tight ${metrics.netBalance >= 0 ? 'text-teal-300' : 'text-rose-400'}`}>
+                    {formatIDR(metrics.netBalance)}
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-xs text-slate-300">
+                    <span>Arus Kas Bersih</span>
+                    <span className="font-semibold">{metrics.netBalance >= 0 ? 'Surplus' : 'Defisit'}</span>
+                  </div>
+                </div>
+                <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-teal-500/10 rounded-full pointer-events-none"></div>
+              </div>
+
+            </div>
+
+            {/* FINANCIAL HEALTH INDICATOR & ALERTS */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                
+                <div className="flex-1 w-full">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Indikator Kesehatan Finansial
+                      </span>
+                      <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full border ${metrics.healthBadge}`}>
+                        {metrics.healthStatus}
+                      </span>
+                    </div>
+                    <span className="text-sm font-extrabold text-slate-800 dark:text-slate-200">
+                      Rasio: {metrics.actualRatio}%
+                    </span>
+                  </div>
+
+                  {/* Progress Bar of Health Ratio */}
+                  <div className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        metrics.expenseRatio > 90
+                          ? 'bg-rose-500'
+                          : metrics.expenseRatio > 75
+                          ? 'bg-amber-500'
+                          : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${Math.min(metrics.expenseRatio, 100)}%` }}
+                    ></div>
+                  </div>
+
+                  <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">
+                    <strong className="text-slate-800 dark:text-slate-200">Rekomendasi Cerdas:</strong> {metrics.healthAdvice}
+                  </p>
+                </div>
+
+                {/* Quick Budget Warning Summary */}
+                {Object.keys(budgets).length > 0 && (
+                  <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700/60 w-full lg:w-auto">
+                    <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400">
+                      <IconTarget className="w-5 h-5" />
+                    </div>
+                    <div className="text-xs">
+                      <div className="font-semibold text-slate-800 dark:text-slate-200">Status Anggaran</div>
+                      <div className="text-slate-500 dark:text-slate-400">
+                        {Object.entries(budgets).filter(([cat, limit]) => (categorySpending[cat] || 0) >= limit).length > 0
+                          ? `${Object.entries(budgets).filter(([cat, limit]) => (categorySpending[cat] || 0) >= limit).length} kategori melebihi batas!`
+                          : 'Semua kategori dalam batas aman.'}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setCurrentView('budgets')}
+                      className="ml-auto text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                    >
+                      Kelola &rarr;
+                    </button>
+                  </div>
+                )}
+
+              </div>
+            </div>
+
+            {/* TAB VIEW 1: DASHBOARD & CHARTS */}
+            {currentView === 'dashboard' && (
+              <div className="space-y-6">
+                
+                {/* 2-Columns of Charts */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  
+                  {/* Chart 1: Bar Chart Pemasukan vs Pengeluaran */}
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                          Perbandingan Pemasukan vs Pengeluaran
+                        </h2>
+                        <p className="text-xs text-slate-500">Visualisasi arus kas periode aktif</p>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                        <IconBarChart className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="h-64 relative flex items-center justify-center">
+                      <BarChartComponent transactions={periodFilteredTransactions} filterPeriod={filterPeriod} darkMode={darkMode} />
+                    </div>
+                  </div>
+
+                  {/* Chart 2: Doughnut Chart Pengeluaran Berdasarkan Kategori */}
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                          Proporsi Pengeluaran per Kategori
+                        </h2>
+                        <p className="text-xs text-slate-500">Persentase alokasi pengeluaran Anda</p>
+                      </div>
+                      <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                        <IconPieChart className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="h-64 relative flex items-center justify-center">
+                      <PieChartComponent categorySpending={categorySpending} darkMode={darkMode} />
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Chart 3: Tren Pengeluaran & Pemasukan Tahunan (Line Chart) */}
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                        Tren Keuangan Tahunan ({selectedYear})
+                      </h2>
+                      <p className="text-xs text-slate-500">Analisis tren bulanan untuk melihat bulan paling hemat & boros</p>
+                    </div>
+                    <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300">
+                      12 Bulan
+                    </span>
+                  </div>
+                  <div className="h-72 relative flex items-center justify-center">
+                    <YearlyTrendChart transactions={transactions} year={selectedYear} darkMode={darkMode} />
+                  </div>
+                </div>
+
+                {/* Recent Transactions Preview on Dashboard */}
+                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">Transaksi Terkini</h2>
+                      <p className="text-xs text-slate-500">Daftar transaksi terbaru pada periode ini</p>
+                    </div>
+                    <button
+                      onClick={() => setCurrentView('transactions')}
+                      className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                    >
+                      Lihat Semua ({periodFilteredTransactions.length}) &rarr;
+                    </button>
+                  </div>
+
+                  <TransactionTable
+                    transactions={periodFilteredTransactions.slice(0, 5)}
+                    onEdit={(t) => { setEditingTx(t); setIsModalOpen(true); }}
+                    onDelete={handleDeleteTransaction}
+                  />
+                </div>
+
+              </div>
+            )}
+
+            {/* TAB VIEW 2: TRANSAKSI & RIWAYAT LENGKAP */}
+            {currentView === 'transactions' && (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+                
+                {/* Search & Filtering Bar */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                  <div className="relative flex-1">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                      <IconSearch className="w-4 h-4" />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Cari transaksi (keterangan, kategori, nominal)..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Filter Type */}
+                    <select
+                      value={typeFilter}
+                      onChange={(e) => setTypeFilter(e.target.value)}
+                      className="px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="all">Semua Tipe</option>
+                      <option value="income">Pemasukan Saja</option>
+                      <option value="expense">Pengeluaran Saja</option>
+                    </select>
+
+                    {/* Filter Category */}
+                    <select
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                      className="px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="all">Semua Kategori</option>
+                      {[...new Set([...categories.income, ...categories.expense])].map((cat, idx) => (
+                        <option key={idx} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+
+                    {/* Sort By */}
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="date-desc">Tanggal Terbaru</option>
+                      <option value="date-asc">Tanggal Terlama</option>
+                      <option value="amount-desc">Nominal Tertinggi</option>
+                      <option value="amount-asc">Nominal Terendah</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Table Content */}
+                <TransactionTable
+                  transactions={tableTransactions}
+                  onEdit={(t) => { setEditingTx(t); setIsModalOpen(true); }}
+                  onDelete={handleDeleteTransaction}
+                />
+
+                {/* Bottom stats of filtered table */}
+                <div className="flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-2">
+                  <span>Menampilkan {tableTransactions.length} dari total {periodFilteredTransactions.length} transaksi pada filter aktif</span>
+                  <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                    <button
+                      onClick={handleResetSample}
+                      className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline"
+                    >
+                      Muat Ulang Contoh Data
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* TAB VIEW 3: MANAJEMEN ANGGARAN (BUDGETING) */}
+            {currentView === 'budgets' && (
+              <div className="space-y-6">
+                
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm">
+                  <div>
+                    <h2 className="text-base font-bold text-slate-800 dark:text-slate-100">
+                      Target & Batas Pengeluaran Bulanan
+                    </h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Tetapkan batas pengeluaran per kategori untuk menjaga disiplin keuangan Anda. Sistem akan memberi peringatan jika mendekati batas (80%) atau melebihinya (100%).
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setIsBudgetModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-slate-900 dark:bg-emerald-600 hover:bg-slate-800 rounded-xl transition-all"
+                  >
+                    <IconPlus className="w-4 h-4" />
+                    <span>Set Target Anggaran</span>
+                  </button>
+                </div>
+
+                {/* Budget Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {categories.expense.map((category) => {
+                    const limit = budgets[category] || 0;
+                    const spent = categorySpending[category] || 0;
+                    const percent = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+                    const isExceeded = limit > 0 && spent > limit;
+                    const isWarning = limit > 0 && percent >= 80 && !isExceeded;
+
+                    return (
+                      <div
+                        key={category}
+                        className={`bg-white dark:bg-slate-900 border rounded-2xl p-5 shadow-sm transition-all ${
+                          isExceeded
+                            ? 'border-rose-300 dark:border-rose-900/80 bg-rose-50/20'
+                            : isWarning
+                            ? 'border-amber-300 dark:border-amber-900/80 bg-amber-50/20'
+                            : 'border-slate-200 dark:border-slate-800'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-bold text-sm text-slate-800 dark:text-slate-100">{category}</h3>
+                          {limit > 0 ? (
+                            <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                              isExceeded
+                                ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border-rose-300'
+                                : isWarning
+                                ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-300'
+                                : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300'
+                            }`}>
+                              {percent}% Terpakai
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-slate-400">Belum diset</span>
+                          )}
+                        </div>
+
+                        <div className="mt-4 space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-500">Terpakai:</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{formatIDR(spent)}</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-slate-500">Batas Anggaran:</span>
+                            <span className="font-medium text-slate-600 dark:text-slate-400">{limit > 0 ? formatIDR(limit) : '-'}</span>
+                          </div>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="mt-3 w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              isExceeded ? 'bg-rose-500' : isWarning ? 'bg-amber-500' : 'bg-emerald-500'
+                            }`}
+                            style={{ width: `${Math.min(percent, 100)}%` }}
+                          ></div>
+                        </div>
+
+                        {/* Alert Message */}
+                        <div className="mt-3 text-xs">
+                          {isExceeded && (
+                            <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-semibold">
+                              <IconAlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>Overbudget sebesar {formatIDR(spent - limit)}!</span>
+                            </div>
+                          )}
+                          {isWarning && (
+                            <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-semibold">
+                              <IconAlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>Waspada! Sisa anggaran tinggal {formatIDR(limit - spent)}.</span>
+                            </div>
+                          )}
+                          {!isExceeded && !isWarning && limit > 0 && (
+                            <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+                              <IconCheckCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span>Sisa aman: {formatIDR(limit - spent)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+              </div>
+            )}
+
+          </main>
+
+          {/* FOOTER */}
+          <footer className="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 text-center text-xs text-slate-500 dark:text-slate-400 no-print">
+            <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p><strong>FinansialKu</strong> &copy; 2026 &mdash; Aplikasi Web Pencatatan Keuangan Pintar</p>
+              <p>Data tersimpan aman di peramban (LocalStorage) lokal Anda.</p>
+            </div>
+          </footer>
+
+          {/* TRANSACTION FORM MODAL (TAMBAH / EDIT) */}
+          {isModalOpen && (
+            <TransactionModal
+              editingTx={editingTx}
+              categories={categories}
+              paymentMethods={DEFAULT_PAYMENT_METHODS}
+              onClose={() => { setIsModalOpen(false); setEditingTx(null); }}
+              onSave={handleSaveTransaction}
+              onAddCategory={(type, newCat) => {
+                setCategories(prev => ({
+                  ...prev,
+                  [type]: [...prev[type], newCat]
+                }));
+              }}
+            />
+          )}
+
+          {/* BUDGET SETTING MODAL */}
+          {isBudgetModalOpen && (
+            <BudgetModal
+              budgets={budgets}
+              categories={categories.expense}
+              onClose={() => setIsBudgetModalOpen(false)}
+              onSave={(newBudgets) => {
+                setBudgets(newBudgets);
+                setIsBudgetModalOpen(false);
+                showToast('Batas anggaran berhasil diperbarui!');
+              }}
+            />
+          )}
+
+        </div>
+      );
+    }
+
+    // --- COMPONENT: TRANSACTION TABLE ---
+    function TransactionTable({ transactions, onEdit, onDelete }) {
+      if (transactions.length === 0) {
+        return (
+          <div className="py-12 text-center text-slate-400">
+            <IconWallet className="w-12 h-12 mx-auto mb-3 opacity-30" />
+            <p className="font-semibold text-sm">Belum ada transaksi pada kriteria ini.</p>
+            <p className="text-xs text-slate-400 mt-1">Gunakan tombol "Catat Transaksi" untuk menambahkan catatan baru.</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase tracking-wider font-semibold">
+                <th className="py-3 px-3">Tanggal & Waktu</th>
+                <th className="py-3 px-3">Kategori</th>
+                <th className="py-3 px-3">Keterangan</th>
+                <th className="py-3 px-3">Metode & Siklus</th>
+                <th className="py-3 px-3 text-right">Nominal (IDR)</th>
+                <th className="py-3 px-3 text-center no-print">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+              {transactions.map((tx) => {
+                const isIncome = tx.type === 'income';
+                return (
+                  <tr key={tx.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      <div className="font-semibold text-slate-800 dark:text-slate-200">{formatDateID(tx.date)}</div>
+                      <div className="text-[11px] text-slate-400">{tx.time || '-'}</div>
+                    </td>
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      <span className="inline-block px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-[11px]">
+                        {tx.category || 'Umum'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="text-slate-800 dark:text-slate-200 font-medium line-clamp-1">{tx.notes || '-'}</div>
+                    </td>
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      <div className="text-slate-700 dark:text-slate-300">{tx.paymentMethod || 'Tunai'}</div>
+                      <div className="text-[10px] text-slate-400">{tx.cycle && tx.cycle !== 'Sekali Jalan' ? `🔁 ${tx.cycle}` : 'Sekali Jalan'}</div>
+                    </td>
+                    <td className="py-3 px-3 text-right whitespace-nowrap">
+                      <span className={`font-bold text-sm ${isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                        {isIncome ? '+' : '-'} {formatIDR(tx.amount)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-center whitespace-nowrap no-print">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => onEdit(tx)}
+                          title="Edit Transaksi"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <IconEdit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => onDelete(tx.id)}
+                          title="Hapus Transaksi"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors"
+                        >
+                          <IconTrash className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
+    // --- COMPONENT: MODAL FORM TRANSAKSI ---
+    function TransactionModal({ editingTx, categories, paymentMethods, onClose, onSave, onAddCategory }) {
+      const [type, setType] = useState(editingTx ? editingTx.type : 'expense');
+      const [amount, setAmount] = useState(editingTx ? editingTx.amount : '');
+      const [displayAmount, setDisplayAmount] = useState(editingTx ? formatIDR(editingTx.amount) : '');
+      const [date, setDate] = useState(editingTx ? editingTx.date : new Date().toISOString().split('T')[0]);
+      const [time, setTime] = useState(editingTx ? editingTx.time : new Date().toTimeString().slice(0, 5));
+      const [category, setCategory] = useState(editingTx ? editingTx.category : (type === 'income' ? categories.income[0] : categories.expense[0]));
+      const [paymentMethod, setPaymentMethod] = useState(editingTx ? editingTx.paymentMethod : paymentMethods[0]);
+      const [cycle, setCycle] = useState(editingTx ? editingTx.cycle : 'Sekali Jalan');
+      const [notes, setNotes] = useState(editingTx ? editingTx.notes : '');
+
+      const [isAddingNewCat, setIsAddingNewCat] = useState(false);
+      const [newCatName, setNewCatName] = useState('');
+
+      // Auto update category choices when type changes
+      const handleTypeChange = (newType) => {
+        setType(newType);
+        if (!editingTx) {
+          setCategory(newType === 'income' ? categories.income[0] : categories.expense[0]);
+        }
+      };
+
+      const handleAmountChange = (raw) => {
+        const cleanNumber = raw.replace(/[^0-9]/g, '');
+        setAmount(cleanNumber);
+        setDisplayAmount(cleanNumber ? formatIDR(cleanNumber) : '');
+      };
+
+      const handleQuickAddAmount = (addValue) => {
+        const current = Number(amount) || 0;
+        const total = current + addValue;
+        setAmount(total.toString());
+        setDisplayAmount(formatIDR(total));
+      };
+
+      const handleCreateCategory = (e) => {
+        e.preventDefault();
+        if (newCatName.trim()) {
+          onAddCategory(type, newCatName.trim());
+          setCategory(newCatName.trim());
+          setNewCatName('');
+          setIsAddingNewCat(false);
+        }
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (!amount || Number(amount) <= 0) {
+          alert('Mohon masukkan jumlah nominal yang valid!');
+          return;
+        }
+
+        onSave({
+          type,
+          amount: Number(amount),
+          date,
+          time,
+          category,
+          paymentMethod,
+          cycle,
+          notes
+        });
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-base text-slate-800 dark:text-slate-100">
+                {editingTx ? 'Edit Catatan Transaksi' : 'Tambah Transaksi Baru'}
+              </h3>
+              <button
+                onClick={onClose}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              
+              {/* Type Switcher: Pemasukan vs Pengeluaran */}
+              <div className="grid grid-cols-2 gap-2 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => handleTypeChange('expense')}
+                  className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                    type === 'expense'
+                      ? 'bg-rose-600 text-white shadow-md'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  Pengeluaran
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTypeChange('income')}
+                  className={`py-2 text-xs font-bold rounded-lg transition-all ${
+                    type === 'income'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  }`}
+                >
+                  Pemasukan
+                </button>
+              </div>
+
+              {/* Amount Input with Rupiah Preview */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Nominal (IDR) *
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center font-bold text-slate-400 text-sm">
+                    Rp
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: 150000"
+                    value={amount}
+                    onChange={(e) => handleAmountChange(e.target.value)}
+                    className="w-full pl-12 pr-4 py-2.5 text-base font-extrabold rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                {displayAmount && (
+                  <p className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                    Format: {displayAmount}
+                  </p>
+                )}
+
+                {/* Quick Add Buttons */}
+                <div className="flex items-center gap-1.5 mt-2">
+                  <span className="text-[11px] text-slate-400 mr-1">Pintasan:</span>
+                  {[
+                    { label: '+50rb', val: 50000 },
+                    { label: '+100rb', val: 100000 },
+                    { label: '+500rb', val: 500000 },
+                    { label: '+1jt', val: 1000000 },
+                  ].map((btn, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleQuickAddAmount(btn.val)}
+                      className="px-2 py-0.5 text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-md"
+                    >
+                      {btn.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Date & Time Row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Tanggal *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Waktu
+                  </label>
+                  <input
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+
+              {/* Category with Add New feature */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Kategori *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingNewCat(!isAddingNewCat)}
+                    className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                  >
+                    {isAddingNewCat ? 'Batal Tambah' : '+ Tambah Kategori Baru'}
+                  </button>
+                </div>
+
+                {isAddingNewCat ? (
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      placeholder="Nama kategori baru..."
+                      value={newCatName}
+                      onChange={(e) => setNewCatName(e.target.value)}
+                      className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCreateCategory}
+                      className="px-3 py-2 text-xs font-bold bg-emerald-600 text-white rounded-xl"
+                    >
+                      Simpan
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {(type === 'income' ? categories.income : categories.expense).map((cat, idx) => (
+                      <option key={idx} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Payment Method & Cycle Row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Metode Pembayaran
+                  </label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    {paymentMethods.map((pm, idx) => (
+                      <option key={idx} value={pm}>{pm}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Siklus Transaksi
+                  </label>
+                  <select
+                    value={cycle}
+                    onChange={(e) => setCycle(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="Sekali Jalan">Sekali Jalan</option>
+                    <option value="Harian">Harian</option>
+                    <option value="Mingguan">Mingguan</option>
+                    <option value="Bulanan">Bulanan</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Notes / Keterangan */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Catatan / Keterangan
+                </label>
+                <textarea
+                  rows="2"
+                  placeholder="Catatan tambahan (contoh: Makan siang di resto A bersama tim)..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                ></textarea>
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-md shadow-emerald-600/20"
+                >
+                  {editingTx ? 'Simpan Perubahan' : 'Catat Transaksi'}
+                </button>
+              </div>
+
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // --- COMPONENT: MODAL ATUR ANGGARAN (BUDGET) ---
+    function BudgetModal({ budgets, categories, onClose, onSave }) {
+      const [formData, setFormData] = useState({ ...budgets });
+
+      const handleChange = (cat, val) => {
+        const clean = val.replace(/[^0-9]/g, '');
+        setFormData(prev => ({
+          ...prev,
+          [cat]: Number(clean) || 0
+        }));
+      };
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave(formData);
+      };
+
+      return (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-base text-slate-800 dark:text-slate-100">
+                Atur Target Anggaran Bulanan
+              </h3>
+              <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg font-bold">
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              <p className="text-xs text-slate-500">
+                Masukkan batas pengeluaran maksimal (Rupiah) untuk setiap kategori di bawah:
+              </p>
+
+              <div className="max-h-80 overflow-y-auto space-y-3 pr-1">
+                {categories.map((cat) => (
+                  <div key={cat} className="flex items-center justify-between gap-3">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300 w-1/2">
+                      {cat}
+                    </label>
+                    <div className="relative w-1/2">
+                      <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-xs font-semibold text-slate-400">
+                        Rp
+                      </span>
+                      <input
+                        type="text"
+                        placeholder="0"
+                        value={formData[cat] ? formData[cat].toString() : ''}
+                        onChange={(e) => handleChange(cat, e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 text-xs font-bold rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 rounded-xl"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-md"
+                >
+                  Simpan Anggaran
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // --- CHART COMPONENT 1: BAR CHART (PEMASUKAN VS PENGELUARAN) ---
+    function BarChartComponent({ transactions, filterPeriod, darkMode }) {
+      const canvasRef = useRef(null);
+      const chartInstanceRef = useRef(null);
+
+      useEffect(() => {
+        if (!canvasRef.current) return;
+        const ctx = canvasRef.current.getContext('2d');
+
+        if (chartInstanceRef.current) {
+          chartInstanceRef.current.destroy();
+        }
+
+        // Calculate data based on period
+        let labels = [];
+        let incomeData = [];
+        let expenseData = [];
+
+        if (filterPeriod === 'yearly') {
+          // 12 Months
+          labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+          incomeData = Array(12).fill(0);
+          expenseData = Array(12).fill(0);
+
+          transactions.forEach(t => {
+            const m = new Date(t.date).getMonth();
+            if (t.type === 'income') incomeData[m] += Number(t.amount);
+            else expenseData[m] += Number(t.amount);
+          });
+        } else {
+          // Group by Date or simply Total Pemasukan vs Pengeluaran
+          let inc = 0;
+          let exp = 0;
+          transactions.forEach(t => {
+            if (t.type === 'income') inc += Number(t.amount);
+            else exp += Number(t.amount);
+          });
+          labels = ['Pemasukan', 'Pengeluaran'];
+          incomeData = [inc, 0];
+          expenseData = [0, exp];
+        }
+
+        const textColor = darkMode ? '#94a3b8' : '#64748b';
+        const gridColor = darkMode ? '#1e293b' : '#f1f5f9';
+
+        chartInstanceRef.current = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: labels,
+            datasets: filterPeriod === 'yearly' ? [
+              {
+                label: 'Pemasukan',
+                data: incomeData,
+                backgroundColor: '#10b981',
+                borderRadius: 6,
+              },
+              {
+                label: 'Pengeluaran',
+                data: expenseData,
+                backgroundColor: '#f43f5e',
+                borderRadius: 6,
+              }
+            ] : [
+              {
+                label: 'Nominal (IDR)',
+                data: [incomeData[0], expenseData[1]],
+                backgroundColor: ['#10b981', '#f43f5e'],
+                borderRadius: 8,
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: filterPeriod === 'yearly',
+                labels: { color: textColor, font: { family: 'Plus Jakarta Sans', size: 11 } }
+              },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => ` ${ctx.dataset.label || ctx.label}: ${formatIDR(ctx.raw)}`
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { color: textColor, font: { family: 'Plus Jakarta Sans', size: 10 } }
+              },
+              y: {
+                grid: { color: gridColor },
+                ticks: {
+                  color: textColor,
+                  font: { family: 'Plus Jakarta Sans', size: 10 },
+                  callback: (val) => val >= 1000000 ? `${val / 1000000} Jt` : val >= 1000 ? `${val / 1000} Rb` : val
+                }
+              }
+            }
+          }
+        });
+
+        return () => {
+          if (chartInstanceRef.current) chartInstanceRef.current.destroy();
+        };
+      }, [transactions, filterPeriod, darkMode]);
+
+      return <canvas ref={canvasRef} className="w-full h-full" />;
+    }
+
+    // --- CHART COMPONENT 2: DOUGHNUT CHART (KATEGORI PENGELUARAN) ---
+    function PieChartComponent({ categorySpending, darkMode }) {
+      const canvasRef = useRef(null);
+      const chartInstanceRef = useRef(null);
+
+      useEffect(() => {
+        if (!canvasRef.current) return;
+        const ctx = canvasRef.current.getContext('2d');
+
+        if (chartInstanceRef.current) {
+          chartInstanceRef.current.destroy();
+        }
+
+        const labels = Object.keys(categorySpending);
+        const data = Object.values(categorySpending);
+
+        if (labels.length === 0 || data.reduce((a, b) => a + b, 0) === 0) {
+          // Empty State fallback
+          labels.push('Belum ada pengeluaran');
+          data.push(1);
+        }
+
+        const modernPalette = [
+          '#f43f5e', '#ec4899', '#8b5cf6', '#3b82f6',
+          '#06b6d4', '#10b981', '#f59e0b', '#f97316', '#64748b'
+        ];
+
+        const textColor = darkMode ? '#cbd5e1' : '#475569';
+
+        chartInstanceRef.current = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: labels,
+            datasets: [{
+              data: data,
+              backgroundColor: labels[0] === 'Belum ada pengeluaran' ? ['#e2e8f0'] : modernPalette.slice(0, labels.length),
+              borderWidth: 2,
+              borderColor: darkMode ? '#0f172a' : '#ffffff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '68%',
+            plugins: {
+              legend: {
+                position: 'right',
+                labels: {
+                  color: textColor,
+                  font: { family: 'Plus Jakarta Sans', size: 10 },
+                  boxWidth: 12,
+                  padding: 8
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => {
+                    const val = ctx.raw;
+                    return ` ${ctx.label}: ${formatIDR(val)}`;
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        return () => {
+          if (chartInstanceRef.current) chartInstanceRef.current.destroy();
+        };
+      }, [categorySpending, darkMode]);
+
+      return <canvas ref={canvasRef} className="w-full h-full" />;
+    }
+
+    // --- CHART COMPONENT 3: YEARLY TREND LINE CHART ---
+    function YearlyTrendChart({ transactions, year, darkMode }) {
+      const canvasRef = useRef(null);
+      const chartInstanceRef = useRef(null);
+
+      useEffect(() => {
+        if (!canvasRef.current) return;
+        const ctx = canvasRef.current.getContext('2d');
+
+        if (chartInstanceRef.current) {
+          chartInstanceRef.current.destroy();
+        }
+
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+        const incomeMonthly = Array(12).fill(0);
+        const expenseMonthly = Array(12).fill(0);
+
+        transactions.forEach(t => {
+          if (!t.date) return;
+          const [y, m] = t.date.split('-').map(Number);
+          if (y === Number(year)) {
+            const monthIdx = m - 1;
+            if (monthIdx >= 0 && monthIdx < 12) {
+              if (t.type === 'income') {
+                incomeMonthly[monthIdx] += Number(t.amount);
+              } else {
+                expenseMonthly[monthIdx] += Number(t.amount);
+              }
+            }
+          }
+        });
+
+        const textColor = darkMode ? '#94a3b8' : '#64748b';
+        const gridColor = darkMode ? '#1e293b' : '#f1f5f9';
+
+        chartInstanceRef.current = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: months,
+            datasets: [
+              {
+                label: 'Pemasukan',
+                data: incomeMonthly,
+                borderColor: '#10b981',
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2.5,
+                pointRadius: 4,
+                pointBackgroundColor: '#10b981'
+              },
+              {
+                label: 'Pengeluaran',
+                data: expenseMonthly,
+                borderColor: '#f43f5e',
+                backgroundColor: 'rgba(244, 63, 94, 0.08)',
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2.5,
+                pointRadius: 4,
+                pointBackgroundColor: '#f43f5e'
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'top',
+                labels: { color: textColor, font: { family: 'Plus Jakarta Sans', size: 11 } }
+              },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => ` ${ctx.dataset.label}: ${formatIDR(ctx.raw)}`
+                }
+              }
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { color: textColor, font: { family: 'Plus Jakarta Sans', size: 10 } }
+              },
+              y: {
+                grid: { color: gridColor },
+                ticks: {
+                  color: textColor,
+                  font: { family: 'Plus Jakarta Sans', size: 10 },
+                  callback: (val) => val >= 1000000 ? `${val / 1000000} Jt` : val >= 1000 ? `${val / 1000} Rb` : val
+                }
+              }
+            }
+          }
+        });
+
+        return () => {
+          if (chartInstanceRef.current) chartInstanceRef.current.destroy();
+        };
+      }, [transactions, year, darkMode]);
+
+      return <canvas ref={canvasRef} className="w-full h-full" />;
+    }
+
+    // Mount React App
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
