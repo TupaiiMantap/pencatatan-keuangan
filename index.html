@@ -244,120 +244,46 @@
     const DEFAULT_PAYMENT_METHODS = ['Tunai (Cash)', 'Transfer Bank', 'E-Wallet (GoPay/OVO/Dana)', 'Kartu Kredit'];
 
     const DEFAULT_BUDGETS = {
-      'Makanan & Minuman': 2500000,
-      'Transportasi': 800000,
-      'Tagihan & Utilitas': 1500000,
-      'Belanja': 1000000,
-      'Hiburan': 500000
+      'Makanan & Minuman': 0,
+      'Transportasi': 0,
+      'Tagihan & Utilitas': 0,
+      'Belanja': 0,
+      'Hiburan': 0
     };
 
-    const SAMPLE_TRANSACTIONS = [
-      {
-        id: 'tx-1',
-        type: 'income',
-        amount: 8500000,
-        date: new Date(Date.now() - 5 * 86400000).toISOString().split('T')[0],
-        time: '09:00',
-        category: 'Gaji',
-        paymentMethod: 'Transfer Bank',
-        cycle: 'Bulanan',
-        notes: 'Gaji bulanan utama'
-      },
-      {
-        id: 'tx-2',
-        type: 'income',
-        amount: 2200000,
-        date: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0],
-        time: '14:30',
-        category: 'Freelance & Bisnis',
-        paymentMethod: 'Transfer Bank',
-        cycle: 'Sekali Jalan',
-        notes: 'Pembayaran project landing page'
-      },
-      {
-        id: 'tx-3',
-        type: 'expense',
-        amount: 1450000,
-        date: new Date(Date.now() - 4 * 86400000).toISOString().split('T')[0],
-        time: '19:15',
-        category: 'Belanja',
-        paymentMethod: 'Transfer Bank',
-        cycle: 'Sekali Jalan',
-        notes: 'Belanja bulanan sembako dan kebutuhan rumah'
-      },
-      {
-        id: 'tx-4',
-        type: 'expense',
-        amount: 850000,
-        date: new Date(Date.now() - 3 * 86400000).toISOString().split('T')[0],
-        time: '10:00',
-        category: 'Tagihan & Utilitas',
-        paymentMethod: 'Transfer Bank',
-        cycle: 'Bulanan',
-        notes: 'Bayar Listrik PLN dan WiFi IndiHome'
-      },
-      {
-        id: 'tx-5',
-        type: 'expense',
-        amount: 320000,
-        date: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0],
-        time: '12:30',
-        category: 'Makanan & Minuman',
-        paymentMethod: 'E-Wallet (GoPay/OVO/Dana)',
-        cycle: 'Sekali Jalan',
-        notes: 'Makan siang traktiran rekan kerja'
-      },
-      {
-        id: 'tx-6',
-        type: 'expense',
-        amount: 150000,
-        date: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0],
-        time: '08:15',
-        category: 'Transportasi',
-        paymentMethod: 'E-Wallet (GoPay/OVO/Dana)',
-        cycle: 'Mingguan',
-        notes: 'Isi bensin motor & saldo e-Toll'
-      },
-      {
-        id: 'tx-7',
-        type: 'expense',
-        amount: 250000,
-        date: new Date().toISOString().split('T')[0],
-        time: '20:00',
-        category: 'Hiburan',
-        paymentMethod: 'Kartu Kredit',
-        cycle: 'Sekali Jalan',
-        notes: 'Tiket nonton bioskop + popcorn'
-      },
-      {
-        id: 'tx-8',
-        type: 'expense',
-        amount: 45000,
-        date: new Date().toISOString().split('T')[0],
-        time: '15:20',
-        category: 'Makanan & Minuman',
-        paymentMethod: 'Tunai (Cash)',
-        cycle: 'Sekali Jalan',
-        notes: 'Kopi sore dan roti bakar'
-      }
-    ];
+    const SAMPLE_TRANSACTIONS = [];
 
     // --- MAIN APP COMPONENT ---
     function App() {
+      // Pastikan data lama direset ke 0 saat pertama kali dimuat
+      useEffect(() => {
+        if (!localStorage.getItem('finansialku_v3_reset_done')) {
+          localStorage.removeItem('finansialku_transactions_v2');
+          localStorage.removeItem('finansialku_budgets_v2');
+          localStorage.setItem('finansialku_transactions_v3', JSON.stringify([]));
+          localStorage.setItem('finansialku_budgets_v3', JSON.stringify({}));
+          localStorage.setItem('finansialku_v3_reset_done', 'true');
+        }
+      }, []);
+
       // LocalStorage States
       const [transactions, setTransactions] = useState(() => {
-        const saved = localStorage.getItem('finansialku_transactions_v2');
-        return saved ? JSON.parse(saved) : SAMPLE_TRANSACTIONS;
+        const resetDone = localStorage.getItem('finansialku_v3_reset_done');
+        if (!resetDone) return [];
+        const saved = localStorage.getItem('finansialku_transactions_v3');
+        return saved ? JSON.parse(saved) : [];
       });
 
       const [categories, setCategories] = useState(() => {
-        const saved = localStorage.getItem('finansialku_categories_v2');
+        const saved = localStorage.getItem('finansialku_categories_v3');
         return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
       });
 
       const [budgets, setBudgets] = useState(() => {
-        const saved = localStorage.getItem('finansialku_budgets_v2');
-        return saved ? JSON.parse(saved) : DEFAULT_BUDGETS;
+        const resetDone = localStorage.getItem('finansialku_v3_reset_done');
+        if (!resetDone) return {};
+        const saved = localStorage.getItem('finansialku_budgets_v3');
+        return saved ? JSON.parse(saved) : {};
       });
 
       const [darkMode, setDarkMode] = useState(() => {
@@ -399,15 +325,15 @@
 
       // Save to localStorage
       useEffect(() => {
-        localStorage.setItem('finansialku_transactions_v2', JSON.stringify(transactions));
+        localStorage.setItem('finansialku_transactions_v3', JSON.stringify(transactions));
       }, [transactions]);
 
       useEffect(() => {
-        localStorage.setItem('finansialku_categories_v2', JSON.stringify(categories));
+        localStorage.setItem('finansialku_categories_v3', JSON.stringify(categories));
       }, [categories]);
 
       useEffect(() => {
-        localStorage.setItem('finansialku_budgets_v2', JSON.stringify(budgets));
+        localStorage.setItem('finansialku_budgets_v3', JSON.stringify(budgets));
       }, [budgets]);
 
       const showToast = (message, type = 'success') => {
@@ -564,11 +490,13 @@
       };
 
       const handleResetSample = () => {
-        if (window.confirm('Reset data ke contoh bawaan awal? Data Anda saat ini akan ditimpa.')) {
-          setTransactions(SAMPLE_TRANSACTIONS);
-          setBudgets(DEFAULT_BUDGETS);
+        if (window.confirm('Reset semua data transaksi dan batas nominal ke Rp 0?')) {
+          setTransactions([]);
+          setBudgets({});
           setCategories(DEFAULT_CATEGORIES);
-          showToast('Data berhasil direset ke contoh bawaan');
+          localStorage.setItem('finansialku_transactions_v3', JSON.stringify([]));
+          localStorage.setItem('finansialku_budgets_v3', JSON.stringify({}));
+          showToast('Semua nominal berhasil direset ke Rp 0');
         }
       };
 
@@ -1172,9 +1100,9 @@
                   <div className="flex items-center gap-2 mt-2 sm:mt-0">
                     <button
                       onClick={handleResetSample}
-                      className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline"
+                      className="text-xs text-rose-500 hover:text-rose-600 dark:hover:text-rose-400 underline font-medium"
                     >
-                      Muat Ulang Contoh Data
+                      Reset Semua Nominal ke Rp 0
                     </button>
                   </div>
                 </div>
