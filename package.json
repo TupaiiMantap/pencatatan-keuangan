@@ -4,6 +4,8 @@
   "description": "Aplikasi web modern untuk manajemen aset multi-wadah, pencatatan transaksi cerdas, utang-piutang dengan cicilan bertahap, scan struk belanja OCR otomatis, tabungan impian (goals), AI financial insights, dan keamanan PIN biometrik.",
   "main": "build.js",
   "scripts": {
+    "start": "node server.js",
+    "build": "node build.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
