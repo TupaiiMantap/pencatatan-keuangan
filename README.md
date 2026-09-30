@@ -1,172 +1,121 @@
-# FinansialKu - Aplikasi Pencatatan Keuangan Interaktif
+# FinansialKu Pro - Aplikasi Manajemen Aset & Keuangan Cerdas
 
-Aplikasi web modern untuk pencatatan keuangan harian, bulanan, dan tahunan yang responsif, interaktif, dan mudah digunakan.
+Aplikasi web modern untuk manajemen aset multi-wadah, pencatatan transaksi cerdas, utang-piutang dengan cicilan bertahap, scan struk belanja OCR otomatis, tabungan impian (goals), AI financial insights, dan keamanan PIN biometrik.
 
-Aplikasi ini telah disediakan dalam bentuk **1 berkas mandiri (`index.html`)** yang dapat langsung dijalankan cukup dengan klik ganda di peramban (Chrome, Firefox, Edge) tanpa perlu konfigurasi backend maupun instalasi package.
-
----
-
-## 1. Arsitektur & Struktur Direktori Proyek (Versi Modular Next.js / React)
-
-Jika Anda ingin memecah atau mengembangkan aplikasi ini menjadi proyek modular berbasis **Next.js (App Router) + Tailwind CSS + Lucide React + Recharts / Chart.js**, berikut adalah struktur direktori standar industri yang direkomendasikan:
-
-```
-finansialku/
-├── public/
-│   ├── favicon.ico
-│   └── icons/
-├── src/
-│   ├── app/
-│   │   ├── layout.tsx              # Root Layout, font Plus Jakarta Sans, Dark Mode provider
-│   │   ├── page.tsx                # Dashboard utama (Overview, Metrik, Charts, Quick Actions)
-│   │   ├── transactions/
-│   │   │   └── page.tsx            # Halaman riwayat transaksi lengkap, filter, & ekspor
-│   │   ├── budgets/
-│   │   │   └── page.tsx            # Halaman manajemen anggaran bulanan per kategori
-│   │   └── globals.css             # Tailwind CSS & print styles
-│   ├── components/
-│   │   ├── dashboard/
-│   │   │   ├── MetricCards.tsx     # Kartu Total Pemasukan, Pengeluaran, Saldo Kas
-│   │   │   ├── FinancialHealth.tsx # Indikator Rasio & Rekomendasi Finansial
-│   │   │   └── PeriodFilter.tsx    # Filter Harian, Bulanan, Tahunan
-│   │   ├── transactions/
-│   │   │   ├── TransactionForm.tsx # Form Modal Tambah/Edit Transaksi
-│   │   │   ├── TransactionTable.tsx# Tabel riwayat dengan aksi edit & hapus
-│   │   │   └── ExportButtons.tsx   # Tombol Ekspor CSV & Cetak PDF
-│   │   ├── charts/
-│   │   │   ├── CashFlowBarChart.tsx# Bar chart pemasukan vs pengeluaran
-│   │   │   ├── CategoryPieChart.tsx# Donut chart proporsi pengeluaran kategori
-│   │   │   └── YearlyTrendLine.tsx # Line chart tren pengeluaran 12 bulan
-│   │   ├── budgets/
-│   │   │   ├── BudgetCard.tsx      # Kartu progres anggaran kategori & peringatan 80%/100%
-│   │   │   └── BudgetModal.tsx     # Modal ubah batas target anggaran
-│   │   └── ui/                     # Komponen UI dasar (Modal, Button, Input, Select, Toast)
-│   ├── hooks/
-│   │   ├── useLocalStorage.ts      # Custom Hook sinkronisasi LocalStorage
-│   │   └── useFinancialMetrics.ts  # Custom Hook perhitungan agregasi & rasio
-│   ├── types/
-│   │   └── transaction.ts          # Definisi TypeScript interface data transaksi & budget
-│   └── lib/
-│       ├── formatters.ts           # Format mata uang Rupiah IDR & Tanggal Indonesia
-│       └── exportHelpers.ts        # Helper generate file CSV & export JSON
-├── package.json
-├── tailwind.config.js
-└── tsconfig.json
-```
+Aplikasi ini disediakan dalam bentuk **1 berkas mandiri (`index.html`)** yang dapat langsung dijalankan cukup dengan klik ganda di peramban (Chrome, Firefox, Edge) tanpa perlu konfigurasi backend maupun instalasi package. Kode sumber modular juga tersedia di direktori `src_app/` dan dapat dikompilasi ulang kapan saja menggunakan `node build.js`.
 
 ---
 
-## 2. Struktur Data JSON (Siap Integrasi Database / Supabase)
+## 🌟 Fitur-Fitur Lanjutan yang Telah Diimplementasikan
 
-Model data dirancang agar dapat langsung disimpan ke tabel PostgreSQL atau Supabase:
-
-```typescript
-export interface Transaction {
-  id: string;               // UUID / Unique string
-  type: 'income' | 'expense'; // Jenis transaksi
-  amount: number;           // Nominal dalam Rupiah (contoh: 150000)
-  date: string;             // Format YYYY-MM-DD (contoh: '2026-09-23')
-  time: string;             // Format HH:mm (contoh: '14:30')
-  category: string;         // 'Makanan & Minuman', 'Gaji', dll.
-  paymentMethod: string;    // 'Tunai (Cash)', 'Transfer Bank', 'E-Wallet', 'Kartu Kredit'
-  cycle: string;            // 'Sekali Jalan', 'Harian', 'Mingguan', 'Bulanan'
-  notes?: string;           // Keterangan / memo transaksi
-}
-
-export interface BudgetConfig {
-  [category: string]: number; // Contoh: { "Makanan & Minuman": 2500000, "Transportasi": 800000 }
-}
-```
+### 1. MANAJEMEN ASET & TRANSFER
+- **Multi-Wadah / Multi-Akun**:
+  - Dukungan beragam jenis wadah: **Dompet Tunai (Cash)**, **Rekening Bank (BCA, Mandiri, BRI, dll)**, **E-Wallet (GoPay, OVO, Dana, ShopeePay)**, **Kartu Kredit**, dan **Investasi**.
+  - Total Kekayaan Bersih (*Total Net Worth*) dikalkulasi otomatis secara real-time dari seluruh wadah aktif.
+  - Setiap transaksi pemasukan/pengeluaran otomatis mendebit atau mengkredit saldo wadah yang dipilih.
+- **Modul Transfer Antar-Akun**:
+  - Memindahkan dana dari akun sumber ke akun tujuan dengan dukungan nominal dan biaya admin opsional.
+  - Saldo kedua wadah diperbarui secara instan tanpa mencatatnya sebagai beban pengeluaran maupun pemasukan, sehingga grafik arus kas tetap akurat.
+- **Sistem Rekonsiliasi Saldo (Penyesuaian Saldo Riil)**:
+  - Fitur untuk mencocokkan saldo catatan aplikasi dengan uang riil fisik (misal uang tunai di dompet).
+  - Sistem menghitung selisih (kurang/lebih) secara otomatis dan membukukan transaksi penyesuaian (*audit trail* transparan).
+- **Modul Utang & Piutang Terpisah**:
+  - **Piutang Saya (Aset Tertagih)**: Uang yang dipinjam pihak lain.
+  - **Utang Saya (Kewajiban)**: Uang yang kita pinjam dari orang lain/lembaga.
+  - **Pembayaran Bertahap (Cicilan)**: Catat pelunasan bertahap dengan memilih akun penerima/pembayar; status otomatis beralih ke *Lunas* saat nominal terpenuhi.
+  - **Pengingat Jatuh Tempo Cerdas**: Indikator warna dinamis untuk status *Terlambat*, *Jatuh Tempo Hari Ini*, *H-7 Hari Lagi*, dan *Aman*.
 
 ---
 
-## 3. Komponen Utama & Kode Logika
+### 2. OTOMATISASI & INTEGRASI DATA
+- **Scan Struk Belanja Cerdas (OCR & Regex Parser)**:
+  - Mengintegrasikan engine **Tesseract.js** untuk membaca teks langsung dari foto struk belanja atau nota pembayaran (kamera HP / unggah berkas gambar).
+  - **Smart Parser Engine**: Otomatis mendeteksi total nominal, tanggal transaksi, nama toko/merchant, dan mengelompokkan kategori yang sesuai (misal: SPBU Pertamina -> Transportasi, Kafe Kopi -> Makanan & Minuman, Indomaret -> Belanja).
+  - Dilengkapi **3 Tombol Preset Demo** (*Struk Minimarket, Kafe Kopi, SPBU*) untuk pengujian kilat tanpa perlu mencari foto struk fisik.
+  - Tombol *"Terapkan ke Form Transaksi"* untuk auto-fill seluruh data transaksi dalam 1 klik.
+- **Ekspor & Impor Data Komprehensif**:
+  - **Ekspor Excel (.xlsx Multi-Sheet)**: Menggunakan SheetJS untuk menghasilkan workbook spreadsheet asli yang memuat 4 sheet rapi: *Wadah & Saldo*, *Riwayat Transaksi*, *Utang & Piutang*, dan *Goals Impian*.
+  - **Ekspor CSV**: Format CSV berstandar UTF-8 BOM untuk kompatibilitas penuh dengan Microsoft Excel Indonesia/Global.
+  - **Cetak Laporan / PDF**: Tampilan cetak yang dioptimalkan (*clean layout* tanpa tombol navigasi).
+  - **Backup & Restore JSON Lengkap**: Pencadangan total seluruh profil, wadah, riwayat transaksi, utang-piutang, anggaran, dan target impian.
 
-### A. State Management & Perhitungan Metrik (Custom Hook / React State)
-```javascript
-// Menghitung ringkasan pemasukan, pengeluaran, saldo, dan rasio kesehatan
-const metrics = useMemo(() => {
-  let totalIncome = 0;
-  let totalExpense = 0;
+---
 
-  periodFilteredTransactions.forEach(tx => {
-    const amt = Number(tx.amount) || 0;
-    if (tx.type === 'income') totalIncome += amt;
-    else totalExpense += amt;
-  });
+### 3. FITUR KEUANGAN PINTAR & GOALS
+- **Financial Goals / Tabungan Impian**:
+  - Penetapan target nominal, kategori, catatan motivasi, dan tenggat waktu (*deadline countdown*).
+  - Kalkulator rekomendasi menabung bulanan: Menghitung otomatis nominal yang harus disisihkan per bulan agar target tercapai tepat waktu.
+  - **Alokasi Saldo / Setor Tabungan**: Pengguna dapat memindahkan dana dari wadah tertentu (misal: Bank BCA) langsung ke target impian, atau menariknya kembali jika dibutuhkan.
+- **FinAI Insight & Financial Intelligence Widget**:
+  - Panel analitik AI cerdas di Dashboard utama yang mengevaluasi performa finansial:
+    - *Rasio Penghematan (Savings Rate)*: Target ideal min. 20% sesuai pilar 50/30/20.
+    - *Daily Burn Rate*: Rata-rata laju pengeluaran per hari.
+    - *Pos Belanja Terbesar*: Deteksi kategori yang menyerap anggaran tertinggi.
+  - Rekomendasi tindakan efisiensi otomatis: Saran pemangkasan pos sekunder, alokasi dana surplus ke target impian, serta peringatan jatuh tempo utang terdekat.
+  - Tombol *"Perbarui Analisis"* dengan tips finansial interaktif.
+- **Manajemen Anggaran Bulanan (Budgeting)**:
+  - Pembatasan anggaran per kategori pengeluaran dengan indikator peringatan 80% (*Waspada*) dan 100% (*Overbudget*).
 
-  const netBalance = totalIncome - totalExpense;
-  const expenseRatio = totalIncome > 0 ? (totalExpense / totalIncome) * 100 : (totalExpense > 0 ? 100 : 0);
+---
 
-  let healthStatus = 'Sangat Sehat';
-  if (expenseRatio > 100) healthStatus = 'Defisit (Bahaya)';
-  else if (expenseRatio >= 80) healthStatus = 'Waspada / Kritis';
-  else if (expenseRatio >= 50) healthStatus = 'Aman & Seimbang';
+### 4. KEAMANAN & PENGATURAN
+- **Penguncian Aplikasi (PIN 4-6 Digit & Mock Biometrik)**:
+  - Layar kunci *Full-Screen Glassmorphism* yang aktif saat aplikasi dimuat atau dikunci manual via tombol gembok di navbar.
+  - Papan ketik angka virtual interaktif dengan indikator titik PIN.
+  - **Simulasi Biometrik (Face ID / Sidik Jari)**: Animasi radar pemindai biometrik modern yang membuka kunci instan dalam 1 detik.
+  - Opsi reset keamanan jika pengguna lupa PIN.
+- **Switcher Multi-Profil**:
+  - Dropdown pemilih profil di navbar atas (*contoh: "👤 Keuangan Pribadi" vs "💼 Bisnis Sampingan"*).
+  - Fitur tambah profil kustom tanpa batas (misal: *Keuangan Keluarga, Usaha Kost, Toko Online*).
+  - Setiap profil memiliki wadah aset, transaksi, utang-piutang, anggaran, dan goals yang terisolasi secara independen.
 
-  return { totalIncome, totalExpense, netBalance, expenseRatio, healthStatus };
-}, [periodFilteredTransactions]);
+---
+
+## 🛠️ Struktur Direktori Proyek
+
 ```
-
-### B. Format Mata Uang Indonesia (IDR)
-```javascript
-export const formatIDR = (number) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Number(number) || 0);
-};
-```
-
-### C. Ekspor Data ke File CSV
-```javascript
-export const exportToCSV = (transactions, periodName) => {
-  const headers = ['ID', 'Tipe', 'Tanggal', 'Waktu', 'Kategori', 'Nominal', 'Metode', 'Siklus', 'Keterangan'];
-  const rows = transactions.map(t => [
-    t.id,
-    t.type === 'income' ? 'Pemasukan' : 'Pengeluaran',
-    t.date,
-    t.time,
-    `"${t.category}"`,
-    t.amount,
-    `"${t.paymentMethod}"`,
-    `"${t.cycle}"`,
-    `"${(t.notes || '').replace(/"/g, '""')}"`
-  ]);
-
-  const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-  const link = document.createElement('a');
-  link.href = encodeURI(csvContent);
-  link.download = `Laporan_FinansialKu_${periodName}_${Date.now()}.csv`;
-  link.click();
-};
+pencatatan-keuangan/
+├── index.html                 # Berkas utama aplikasi (Single-file All-in-One, siap pakai)
+├── README.md                  # Dokumentasi lengkap arsitektur dan fitur
+├── build.js                   # Script kompilasi modular Node.js -> index.html
+├── serve.js                   # Server lokal sederhana untuk pengujian
+├── verify_syntax.js           # Script verifikasi sintaks & keseimbangan delimiter
+└── src_app/                   # Modul kode sumber terstruktur
+    ├── head.html              # HTML Head, Tailwind, React, Chart.js, Tesseract.js, XLSX
+    ├── icons.js               # Komponen ikon SVG modern
+    ├── constants_and_helpers.js # Formatters IDR, tanggal, data inisial, helper hari
+    ├── ocr_modal.js           # Modal OCR Scan Struk belanja & regex smart parser
+    ├── accounts_view.js       # Modul wadah aset, transfer antar-akun & rekonsiliasi saldo
+    ├── debts_view.js          # Modul utang-piutang, cicilan bertahap & pengingat jatuh tempo
+    ├── goals_budget_view.js   # Modul tabungan impian & manajemen anggaran kategori
+    ├── ai_widget.js           # Widget FinAI Financial Intelligence & saran otomatis
+    ├── security_components.js # Layar kunci PIN, simulasi biometrik & modal pengaturan
+    ├── charts_and_tables.js   # Komponen Chart.js (Bar, Donut, Line) & tabel riwayat
+    ├── transaction_modal.js   # Form transaksi terintegrasi akun & shortcut OCR
+    └── app_main.js            # Komponen inti App, multi-profil switcher & ekspor Excel
 ```
 
 ---
 
-## 4. Langkah Menjalankan Aplikasi
+## 🚀 Cara Menjalankan
 
-### Metode 1: Menggunakan 1 File Standalone `index.html` (Instan & Tanpa Install)
-1. Buka folder kerja Anda di File Explorer:
-   `c:\Users\Teacher\Documents\gem percobaan pertama`
-2. Klik ganda pada berkas **`index.html`** (atau klik kanan -> *Buka dengan / Open with Google Chrome / Microsoft Edge*).
-3. Aplikasi akan langsung berjalan di peramban Anda dengan data sampel yang interaktif.
-4. Anda dapat langsung:
-   - Mencoba tombol **"Catat Transaksi"** untuk menambah atau mengedit transaksi.
-   - Menekan tombol **ikon Bulan/Matahari** untuk mencoba *Dark Mode* dan *Light Mode*.
-   - Memfilter periode *Harian*, *Bulanan*, atau *Tahunan*.
-   - Melihat progress dan peringatan overbudget pada tab **"Anggaran (Budget)"**.
-   - Mengekspor data ke file **CSV** atau **Cetak PDF**.
-   - Mencadangkan data via tombol **Backup** (file JSON) dan memulihkannya via tombol **Restore**.
+1. **Cara Paling Mudah (Langsung Pakai)**:
+   - Cukup klik ganda pada file `index.html` menggunakan peramban favorit Anda (Google Chrome, Microsoft Edge, Mozilla Firefox, Safari).
+   - Seluruh fitur, grafik, OCR parser, dan ekspor Excel langsung berfungsi 100% tanpa perlu server.
 
-### Metode 2: Menjalankan via Local Web Server (Opsional)
-Jika ingin menjalankan melalui local server sederhana menggunakan Python atau Node.js:
-```bash
-# Menggunakan Python:
-python -m http.server 3000
+2. **Melalui Local Development Server (Opsional)**:
+   - Pastikan Node.js terpasang di komputer Anda.
+   - Buka terminal pada folder proyek dan jalankan:
+     ```bash
+     node serve.js
+     ```
+   - Buka peramban di `http://localhost:3000`.
 
-# Atau menggunakan npx serve:
-npx -y serve .
-```
-Lalu buka alamat `http://localhost:3000` di peramban Anda.
+3. **Kompilasi Ulang Kode Modular**:
+   - Jika Anda mengubah kode di dalam folder `src_app/`, satukan kembali ke `index.html` dengan menjalankan:
+     ```bash
+     node build.js
+     ```
+
+---
+*FinansialKu Pro &copy; 2026 &mdash; Aplikasi Manajemen Aset & Keuangan Cerdas*
