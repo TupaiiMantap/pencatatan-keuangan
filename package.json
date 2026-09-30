@@ -1,0 +1,24 @@
+{
+  "name": "pencatatan-keuangan",
+  "version": "1.0.0",
+  "description": "Aplikasi web modern untuk manajemen aset multi-wadah, pencatatan transaksi cerdas, utang-piutang dengan cicilan bertahap, scan struk belanja OCR otomatis, tabungan impian (goals), AI financial insights, dan keamanan PIN biometrik.",
+  "main": "build.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TupaiiMantap/pencatatan-keuangan.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/TupaiiMantap/pencatatan-keuangan/issues"
+  },
+  "homepage": "https://github.com/TupaiiMantap/pencatatan-keuangan#readme",
+  "dependencies": {
+    "firebase": "^12.19.0"
+  }
+}

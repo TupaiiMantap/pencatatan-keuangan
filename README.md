@@ -1,73 +1,59 @@
-# FinansialKu Pro - Aplikasi Manajemen Aset & Keuangan Cerdas
+# FinansialKu Pro - Aplikasi Manajemen Aset, Keuangan Cerdas & Firebase Cloud Sync
 
-Aplikasi web modern untuk manajemen aset multi-wadah, pencatatan transaksi cerdas, utang-piutang dengan cicilan bertahap, scan struk belanja OCR otomatis, tabungan impian (goals), AI financial insights, dan keamanan PIN biometrik.
+Aplikasi web modern untuk manajemen aset multi-wadah, pencatatan transaksi cerdas, utang-piutang dengan cicilan bertahap, scan struk belanja OCR otomatis, tabungan impian (goals), AI financial insights, keamanan PIN biometrik, dan **Sinkronisasi Realtime Cloud Database Firebase**.
 
-Aplikasi ini disediakan dalam bentuk **1 berkas mandiri (`index.html`)** yang dapat langsung dijalankan cukup dengan klik ganda di peramban (Chrome, Firefox, Edge) tanpa perlu konfigurasi backend maupun instalasi package. Kode sumber modular juga tersedia di direktori `src_app/` dan dapat dikompilasi ulang kapan saja menggunakan `node build.js`.
+Aplikasi ini disediakan dalam bentuk **1 berkas mandiri (`index.html`)** yang dapat langsung dijalankan cukup dengan klik ganda di peramban (Chrome, Firefox, Edge) tanpa perlu konfigurasi backend tambahan. Seluruh konfigurasi Firebase telah tertanam dan aktif.
 
 ---
 
-## 🌟 Fitur-Fitur Lanjutan yang Telah Diimplementasikan
+## ☁️ Integrasi Firebase Cloud Database & Autentikasi
+
+Aplikasi telah terhubung ke proyek Firebase Anda:
+- **Project ID**: `finansialku-pro`
+- **Auth Domain**: `finansialku-pro.firebaseapp.com`
+- **Storage Bucket**: `finansialku-pro.firebasestorage.app`
+
+### Fitur Firebase yang Tersedia:
+1. **Multi-Method Authentication**:
+   - **Google One-Tap / Popup Sign-In**: Masuk cepat dengan akun Google.
+   - **Email & Password**: Registrasi akun baru, masuk, dan fitur lupa kata sandi.
+   - **Mode Tamu (Anonymous Cloud)**: Sinkronisasi data cloud instan tanpa perlu mendaftar.
+2. **Realtime Firestore Database Sync**:
+   - Sinkronisasi otomatis dua arah antar-perangkat secara *real-time*.
+   - Setiap transaksi, wadah, utang-piutang, anggaran, dan target impian yang diubah akan tersimpan otomatis ke Cloud Firestore (`users/{uid}`).
+3. **Offline-First Persistence**:
+   - Jika koneksi internet terputus, aplikasi tetap berjalan normal menggunakan LocalStorage lokal dan akan otomatis sinkron ke Cloud saat kembali online.
+
+---
+
+## 🌟 Fitur-Fitur Utama Aplikasi
 
 ### 1. MANAJEMEN ASET & TRANSFER
-- **Multi-Wadah / Multi-Akun**:
-  - Dukungan beragam jenis wadah: **Dompet Tunai (Cash)**, **Rekening Bank (BCA, Mandiri, BRI, dll)**, **E-Wallet (GoPay, OVO, Dana, ShopeePay)**, **Kartu Kredit**, dan **Investasi**.
-  - Total Kekayaan Bersih (*Total Net Worth*) dikalkulasi otomatis secara real-time dari seluruh wadah aktif.
-  - Setiap transaksi pemasukan/pengeluaran otomatis mendebit atau mengkredit saldo wadah yang dipilih.
-- **Modul Transfer Antar-Akun**:
-  - Memindahkan dana dari akun sumber ke akun tujuan dengan dukungan nominal dan biaya admin opsional.
-  - Saldo kedua wadah diperbarui secara instan tanpa mencatatnya sebagai beban pengeluaran maupun pemasukan, sehingga grafik arus kas tetap akurat.
-- **Sistem Rekonsiliasi Saldo (Penyesuaian Saldo Riil)**:
-  - Fitur untuk mencocokkan saldo catatan aplikasi dengan uang riil fisik (misal uang tunai di dompet).
-  - Sistem menghitung selisih (kurang/lebih) secara otomatis dan membukukan transaksi penyesuaian (*audit trail* transparan).
-- **Modul Utang & Piutang Terpisah**:
-  - **Piutang Saya (Aset Tertagih)**: Uang yang dipinjam pihak lain.
-  - **Utang Saya (Kewajiban)**: Uang yang kita pinjam dari orang lain/lembaga.
-  - **Pembayaran Bertahap (Cicilan)**: Catat pelunasan bertahap dengan memilih akun penerima/pembayar; status otomatis beralih ke *Lunas* saat nominal terpenuhi.
-  - **Pengingat Jatuh Tempo Cerdas**: Indikator warna dinamis untuk status *Terlambat*, *Jatuh Tempo Hari Ini*, *H-7 Hari Lagi*, dan *Aman*.
+- **Multi-Wadah / Multi-Akun**: Dompet Tunai (Cash), Rekening Bank (BCA, Mandiri, BRI, dll), E-Wallet (GoPay, OVO, Dana, ShopeePay), Kartu Kredit, dan Investasi.
+- **Total Kekayaan Bersih (*Total Net Worth*)**: Terkalkulasi otomatis dari seluruh wadah aktif.
+- **Transfer Antar-Akun**: Pindah dana antar akun dengan biaya admin opsional tanpa memengaruhi kalkulasi arus kas pemasukan/pengeluaran.
+- **Rekonsiliasi Saldo Riil**: Fitur mencocokkan saldo catatan aplikasi dengan uang fisik nyata (menghasilkan transaksi penyesuaian otomatis).
+- **Modul Utang & Piutang**: Pencatatan piutang (uang di luar) vs utang (kewajiban), pembayaran cicilan bertahap, dan pengingat jatuh tempo (*Overdue*, *H-7*, *Aman*).
 
----
+### 2. OTOMATISASI & SCAN STRUK OCR
+- **Tesseract.js OCR Scanner**: Pindai foto struk belanja (kamera HP/unggah berkas) untuk mengekstrak nominal total, tanggal, dan nama toko secara otomatis.
+- **Smart Category Parser**: Otomatis mendeteksi kategori berdasarkan teks struk belanja.
+- **3 Tombol Preset Demo**: Uji coba instan (*Struk Minimarket, Kafe Kopi, SPBU*) dalam 1 klik.
 
-### 2. OTOMATISASI & INTEGRASI DATA
-- **Scan Struk Belanja Cerdas (OCR & Regex Parser)**:
-  - Mengintegrasikan engine **Tesseract.js** untuk membaca teks langsung dari foto struk belanja atau nota pembayaran (kamera HP / unggah berkas gambar).
-  - **Smart Parser Engine**: Otomatis mendeteksi total nominal, tanggal transaksi, nama toko/merchant, dan mengelompokkan kategori yang sesuai (misal: SPBU Pertamina -> Transportasi, Kafe Kopi -> Makanan & Minuman, Indomaret -> Belanja).
-  - Dilengkapi **3 Tombol Preset Demo** (*Struk Minimarket, Kafe Kopi, SPBU*) untuk pengujian kilat tanpa perlu mencari foto struk fisik.
-  - Tombol *"Terapkan ke Form Transaksi"* untuk auto-fill seluruh data transaksi dalam 1 klik.
-- **Ekspor & Impor Data Komprehensif**:
-  - **Ekspor Excel (.xlsx Multi-Sheet)**: Menggunakan SheetJS untuk menghasilkan workbook spreadsheet asli yang memuat 4 sheet rapi: *Wadah & Saldo*, *Riwayat Transaksi*, *Utang & Piutang*, dan *Goals Impian*.
-  - **Ekspor CSV**: Format CSV berstandar UTF-8 BOM untuk kompatibilitas penuh dengan Microsoft Excel Indonesia/Global.
-  - **Cetak Laporan / PDF**: Tampilan cetak yang dioptimalkan (*clean layout* tanpa tombol navigasi).
-  - **Backup & Restore JSON Lengkap**: Pencadangan total seluruh profil, wadah, riwayat transaksi, utang-piutang, anggaran, dan target impian.
+### 3. EKSPOR & CADANGAN LENGKAP
+- **Ekspor Excel (.xlsx Multi-Sheet)**: 4 sheet (*Wadah & Saldo*, *Riwayat Transaksi*, *Utang & Piutang*, *Goals Impian*).
+- **Ekspor CSV**: Standar UTF-8 BOM untuk kompatibilitas Excel global.
+- **Cetak Laporan / PDF**: Format cetak bersih ramah dokumen fisik.
+- **Backup & Restore JSON**: Cadangkan seluruh database profil dan pulihkan kapan saja.
 
----
+### 4. KEUANGAN PINTAR & GOALS
+- **Tabungan Impian (Financial Goals)**: Target nominal, tenggat waktu, kalkulator rekomendasi menabung bulanan, dan alokasi saldo langsung dari wadah.
+- **FinAI Financial Intelligence Widget**: Analisis rasio tabungan (*Savings Rate*), laju pengeluaran harian (*Burn Rate*), deteksi pos belanja terbesar, dan saran efisiensi otomatis.
+- **Manajemen Anggaran (Budgeting)**: Batas anggaran bulanan per kategori dengan indikator peringatan 80% dan 100%.
 
-### 3. FITUR KEUANGAN PINTAR & GOALS
-- **Financial Goals / Tabungan Impian**:
-  - Penetapan target nominal, kategori, catatan motivasi, dan tenggat waktu (*deadline countdown*).
-  - Kalkulator rekomendasi menabung bulanan: Menghitung otomatis nominal yang harus disisihkan per bulan agar target tercapai tepat waktu.
-  - **Alokasi Saldo / Setor Tabungan**: Pengguna dapat memindahkan dana dari wadah tertentu (misal: Bank BCA) langsung ke target impian, atau menariknya kembali jika dibutuhkan.
-- **FinAI Insight & Financial Intelligence Widget**:
-  - Panel analitik AI cerdas di Dashboard utama yang mengevaluasi performa finansial:
-    - *Rasio Penghematan (Savings Rate)*: Target ideal min. 20% sesuai pilar 50/30/20.
-    - *Daily Burn Rate*: Rata-rata laju pengeluaran per hari.
-    - *Pos Belanja Terbesar*: Deteksi kategori yang menyerap anggaran tertinggi.
-  - Rekomendasi tindakan efisiensi otomatis: Saran pemangkasan pos sekunder, alokasi dana surplus ke target impian, serta peringatan jatuh tempo utang terdekat.
-  - Tombol *"Perbarui Analisis"* dengan tips finansial interaktif.
-- **Manajemen Anggaran Bulanan (Budgeting)**:
-  - Pembatasan anggaran per kategori pengeluaran dengan indikator peringatan 80% (*Waspada*) dan 100% (*Overbudget*).
-
----
-
-### 4. KEAMANAN & PENGATURAN
-- **Penguncian Aplikasi (PIN 4-6 Digit & Mock Biometrik)**:
-  - Layar kunci *Full-Screen Glassmorphism* yang aktif saat aplikasi dimuat atau dikunci manual via tombol gembok di navbar.
-  - Papan ketik angka virtual interaktif dengan indikator titik PIN.
-  - **Simulasi Biometrik (Face ID / Sidik Jari)**: Animasi radar pemindai biometrik modern yang membuka kunci instan dalam 1 detik.
-  - Opsi reset keamanan jika pengguna lupa PIN.
-- **Switcher Multi-Profil**:
-  - Dropdown pemilih profil di navbar atas (*contoh: "👤 Keuangan Pribadi" vs "💼 Bisnis Sampingan"*).
-  - Fitur tambah profil kustom tanpa batas (misal: *Keuangan Keluarga, Usaha Kost, Toko Online*).
-  - Setiap profil memiliki wadah aset, transaksi, utang-piutang, anggaran, dan goals yang terisolasi secara independen.
+### 5. KEAMANAN & PENGATURAN
+- **Penguncian PIN 4-6 Digit & Mock Biometrik**: Layar kunci interaktif dengan animasi pemindai Face ID / Sidik Jari.
+- **Multi-Profil Switcher**: Beralih profil (*Keuangan Pribadi*, *Bisnis Sampingan*, dll) dengan data terisolasi secara mandiri.
 
 ---
 
@@ -76,46 +62,41 @@ Aplikasi ini disediakan dalam bentuk **1 berkas mandiri (`index.html`)** yang da
 ```
 pencatatan-keuangan/
 ├── index.html                 # Berkas utama aplikasi (Single-file All-in-One, siap pakai)
-├── README.md                  # Dokumentasi lengkap arsitektur dan fitur
-├── build.js                   # Script kompilasi modular Node.js -> index.html
-├── serve.js                   # Server lokal sederhana untuk pengujian
-├── verify_syntax.js           # Script verifikasi sintaks & keseimbangan delimiter
-└── src_app/                   # Modul kode sumber terstruktur
-    ├── head.html              # HTML Head, Tailwind, React, Chart.js, Tesseract.js, XLSX
+├── README.md                  # Dokumentasi lengkap
+├── build.js                   # Skrip penggabung modular Node.js -> index.html
+├── serve.js                   # Server pengujian lokal
+├── package.json               # Konfigurasi npm & dependensi Firebase
+├── node_modules/              # Dependensi Firebase
+└── src_app/                   # Kode sumber modular
+    ├── head.html              # HTML Head & CDN SDK (Firebase, Tailwind, React, Chart.js, Tesseract, XLSX)
+    ├── firebase_service.js    # Konfigurasi Firebase, Auth (Google/Email), Firestore sync & Modal Login
     ├── icons.js               # Komponen ikon SVG modern
-    ├── constants_and_helpers.js # Formatters IDR, tanggal, data inisial, helper hari
-    ├── ocr_modal.js           # Modal OCR Scan Struk belanja & regex smart parser
-    ├── accounts_view.js       # Modul wadah aset, transfer antar-akun & rekonsiliasi saldo
-    ├── debts_view.js          # Modul utang-piutang, cicilan bertahap & pengingat jatuh tempo
-    ├── goals_budget_view.js   # Modul tabungan impian & manajemen anggaran kategori
-    ├── ai_widget.js           # Widget FinAI Financial Intelligence & saran otomatis
-    ├── security_components.js # Layar kunci PIN, simulasi biometrik & modal pengaturan
-    ├── charts_and_tables.js   # Komponen Chart.js (Bar, Donut, Line) & tabel riwayat
+    ├── constants_and_helpers.js # Formatters, inisialisasi data, helper
+    ├── ocr_modal.js           # Modal OCR Scan Struk & Regex Parser
+    ├── accounts_view.js       # Modul wadah aset, transfer antar-akun & rekonsiliasi
+    ├── debts_view.js          # Modul utang-piutang & cicilan bertahap
+    ├── goals_budget_view.js   # Modul tabungan impian & anggaran
+    ├── ai_widget.js           # Widget FinAI Financial Intelligence
+    ├── security_components.js # Layar kunci PIN & simulasi biometrik
+    ├── charts_and_tables.js   # Komponen grafik Chart.js & tabel riwayat
     ├── transaction_modal.js   # Form transaksi terintegrasi akun & shortcut OCR
-    └── app_main.js            # Komponen inti App, multi-profil switcher & ekspor Excel
+    └── app_main.js            # Komponen inti App & sinkronisasi realtime
 ```
 
 ---
 
 ## 🚀 Cara Menjalankan
 
-1. **Cara Paling Mudah (Langsung Pakai)**:
-   - Cukup klik ganda pada file `index.html` menggunakan peramban favorit Anda (Google Chrome, Microsoft Edge, Mozilla Firefox, Safari).
-   - Seluruh fitur, grafik, OCR parser, dan ekspor Excel langsung berfungsi 100% tanpa perlu server.
+1. **Langsung Menggunakan Peramban**:
+   - Cukup klik ganda pada berkas [index.html](file:///c:/Users/Teacher/Documents/pencatatan-keuangan/index.html).
+   - Klik tombol **"☁️ Hubungkan Cloud"** di pojok kanan atas untuk masuk dengan akun Google atau Email dan mengaktifkan sinkronisasi realtime Firebase.
 
-2. **Melalui Local Development Server (Opsional)**:
-   - Pastikan Node.js terpasang di komputer Anda.
-   - Buka terminal pada folder proyek dan jalankan:
+2. **Melalui Server Lokal (Opsional)**:
+   - Jalankan di terminal:
      ```bash
      node serve.js
      ```
-   - Buka peramban di `http://localhost:3000`.
-
-3. **Kompilasi Ulang Kode Modular**:
-   - Jika Anda mengubah kode di dalam folder `src_app/`, satukan kembali ke `index.html` dengan menjalankan:
-     ```bash
-     node build.js
-     ```
+   - Buka `http://localhost:3000` di peramban.
 
 ---
-*FinansialKu Pro &copy; 2026 &mdash; Aplikasi Manajemen Aset & Keuangan Cerdas*
+*FinansialKu Pro &copy; 2026 &mdash; Terintegrasi dengan Firebase Cloud Platform*

@@ -3,6 +3,7 @@ const path = require('path');
 
 const files = [
   'src_app/head.html',
+  'src_app/firebase_service.js',
   'src_app/icons.js',
   'src_app/constants_and_helpers.js',
   'src_app/ocr_modal.js',

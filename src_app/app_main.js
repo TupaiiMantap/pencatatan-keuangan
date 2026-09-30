@@ -26,7 +26,14 @@
         return saved ? JSON.parse(saved) : false;
       });
 
-      // 2. MULTI-PROFILE DATA STORE (MIGRATION INCLUDED)
+      // 2. FIREBASE AUTH & CLOUD SYNC STATES
+      const [firebaseUser, setFirebaseUser] = useState(null);
+      const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+      const [cloudSyncStatus, setCloudSyncStatus] = useState('idle'); // 'idle' | 'syncing' | 'synced' | 'offline' | 'error'
+      const [lastSyncedAt, setLastSyncedAt] = useState(null);
+      const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+      // 3. MULTI-PROFILE DATA STORE (MIGRATION INCLUDED)
       const [allProfileData, setAllProfileData] = useState(() => {
         const saved = localStorage.getItem('finansialku_pro_data_v1');
         if (saved) {
@@ -122,7 +129,71 @@
       const goals = currentData.goals || [];
       const debts = currentData.debts || [];
 
-      // Save sync effects
+      const showToast = (message, type = 'success') => {
+        setToastMsg({ message, type });
+        setTimeout(() => setToastMsg(null), 3500);
+      };
+
+      // 4. FIREBASE AUTH STATE LISTENER & REALTIME SYNC
+      useEffect(() => {
+        let unsubscribeSnapshot = () => {};
+
+        const unsubscribeAuth = authService.onAuthStateChanged((user) => {
+          setFirebaseUser(user);
+          if (user) {
+            setCloudSyncStatus('syncing');
+            // Listen to real-time changes from Firestore
+            unsubscribeSnapshot = cloudSyncService.subscribeUserData(user.uid, (cloudData) => {
+              if (cloudData && cloudData.data) {
+                setAllProfileData(cloudData.data);
+                if (cloudData.profiles) setProfiles(cloudData.profiles);
+                if (cloudData.security) setSecurity(cloudData.security);
+                setCloudSyncStatus('synced');
+                setLastSyncedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
+              } else {
+                // Initial upload of existing local data to cloud
+                handleManualCloudSave(user.uid);
+              }
+            });
+          } else {
+            setCloudSyncStatus('offline');
+          }
+        });
+
+        return () => {
+          unsubscribeAuth();
+          unsubscribeSnapshot();
+        };
+      }, []);
+
+      // Auto-save to cloud on local changes if logged in (debounced)
+      useEffect(() => {
+        if (!firebaseUser) return;
+        const timer = setTimeout(() => {
+          handleManualCloudSave(firebaseUser.uid);
+        }, 1200);
+
+        return () => clearTimeout(timer);
+      }, [allProfileData, profiles, security, firebaseUser]);
+
+      const handleManualCloudSave = async (userId = firebaseUser?.uid) => {
+        if (!userId) return;
+        setCloudSyncStatus('syncing');
+        const success = await cloudSyncService.saveUserData(userId, {
+          profiles,
+          activeProfileId,
+          security,
+          data: allProfileData
+        });
+        if (success) {
+          setCloudSyncStatus('synced');
+          setLastSyncedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
+        } else {
+          setCloudSyncStatus('error');
+        }
+      };
+
+      // Local storage synchronization
       useEffect(() => {
         localStorage.setItem('finansialku_pro_profiles', JSON.stringify(profiles));
       }, [profiles]);
@@ -148,11 +219,6 @@
         localStorage.setItem('finansialku_dark_mode', JSON.stringify(darkMode));
       }, [darkMode]);
 
-      const showToast = (message, type = 'success') => {
-        setToastMsg({ message, type });
-        setTimeout(() => setToastMsg(null), 3500);
-      };
-
       // Helper to update active profile data state
       const updateCurrentProfileData = (updater) => {
         setAllProfileData(prev => {
@@ -177,7 +243,7 @@
         });
       }, [transactions, filterPeriod, selectedDate, selectedMonth, selectedYear]);
 
-      // Financial Metrics (Calculates only from real income and expense, excluding transfers)
+      // Financial Metrics
       const metrics = useMemo(() => {
         let totalIncome = 0;
         let totalExpense = 0;
@@ -461,16 +527,12 @@
           const newPaidTotal = (Number(debt.paidAmount) || 0) + paymentAmt;
           const isNowPaid = newPaidTotal >= Number(debt.totalAmount);
 
-          // Update Account balance
           if (debt.type === 'receivable') {
-            // We receive money -> increases account balance
             updatedAccounts = updatedAccounts.map(acc => acc.id === paymentData.accountId ? { ...acc, balance: acc.balance + paymentAmt } : acc);
           } else {
-            // We pay debt -> decreases account balance
             updatedAccounts = updatedAccounts.map(acc => acc.id === paymentData.accountId ? { ...acc, balance: acc.balance - paymentAmt } : acc);
           }
 
-          // Create payment record and record in transactions
           const payId = 'pay-' + Date.now();
           const newPaymentRecord = {
             id: payId,
@@ -725,7 +787,6 @@
               if (parsed.security) setSecurity(parsed.security);
               showToast('Seluruh data berhasil dipulihkan dari cadangan!');
             } else if (Array.isArray(parsed.transactions)) {
-              // Legacy backup support
               updateCurrentProfileData(prev => ({
                 ...prev,
                 transactions: parsed.transactions,
@@ -840,7 +901,7 @@
                       </div>
                     </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:block">
-                      {currentProfileObj?.name} &bull; Manajemen Aset, Transaksi & Keuangan Cerdas
+                      {currentProfileObj?.name} &bull; Multi-Akun & Cloud Database
                     </p>
                   </div>
                 </div>
@@ -872,6 +933,72 @@
                 {/* Header Actions */}
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   
+                  {/* Cloud Sync Status & Account Button */}
+                  {firebaseUser ? (
+                    <div className="relative">
+                      <button
+                        onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 text-xs font-bold transition-all"
+                        title={cloudSyncStatus === 'synced' ? `Tersinkronisasi ke Firebase (${lastSyncedAt || 'Baru saja'})` : 'Menghubungkan ke Cloud'}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span className="hidden md:inline max-w-[100px] truncate">
+                          {firebaseUser.displayName || firebaseUser.email || 'Cloud Aktif'}
+                        </span>
+                        <svg className="w-3.5 h-3.5 text-amber-500" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+                        </svg>
+                      </button>
+
+                      {/* User Dropdown */}
+                      {isUserMenuOpen && (
+                        <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-2 z-50 text-xs space-y-1">
+                          <div className="p-2 border-b border-slate-100 dark:border-slate-800">
+                            <p className="font-bold text-slate-800 dark:text-slate-100 truncate">{firebaseUser.displayName || 'Pengguna Firebase'}</p>
+                            <p className="text-[10px] text-slate-400 truncate">{firebaseUser.email || (firebaseUser.isAnonymous ? 'Mode Tamu Cloud' : 'ID: ' + firebaseUser.uid.slice(0, 8))}</p>
+                            <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-bold rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                              ☁️ Firestore Realtime Sync
+                            </span>
+                          </div>
+
+                          <button
+                            onClick={() => {
+                              handleManualCloudSave();
+                              setIsUserMenuOpen(false);
+                              showToast('Data berhasil disinkronkan ke Firebase Cloud');
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 font-semibold text-slate-700 dark:text-slate-200 flex items-center justify-between"
+                          >
+                            <span>Sinkronkan Sekarang</span>
+                            <span>⚡</span>
+                          </button>
+
+                          <button
+                            onClick={async () => {
+                              await authService.logout();
+                              setIsUserMenuOpen(false);
+                              showToast('Berhasil keluar dari akun');
+                            }}
+                            className="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 font-bold"
+                          >
+                            Keluar Akun
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setIsAuthModalOpen(true)}
+                      title="Hubungkan ke Firebase untuk Sinkronisasi Multi-Perangkat"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/20 transition-all active:scale-95"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+                      </svg>
+                      <span className="hidden sm:inline">Hubungkan Cloud</span>
+                    </button>
+                  )}
+
                   {/* Quick OCR Scanner Trigger */}
                   <button
                     onClick={() => setIsOCRModalOpen(true)}
@@ -1441,7 +1568,7 @@
           {/* FOOTER */}
           <footer className="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 text-center text-xs text-slate-500 dark:text-slate-400 no-print">
             <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <p><strong>FinansialKu Pro</strong> &copy; 2026 &mdash; Aplikasi Manajemen Aset, Keuangan Cerdas & OCR Receipt</p>
+              <p><strong>FinansialKu Pro</strong> &copy; 2026 &mdash; Aplikasi Manajemen Aset, Keuangan Cerdas & Firebase Cloud Sync</p>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setIsSecurityModalOpen(true)}
@@ -1451,7 +1578,7 @@
                   <span>Pengaturan PIN Keamanan</span>
                 </button>
                 <span>&bull;</span>
-                <p>Data tersimpan di perangkat lokal</p>
+                <p>Firebase Project: finansialku-pro</p>
               </div>
             </div>
           </footer>
@@ -1515,6 +1642,17 @@
               }}
             />
           )}
+
+          {/* MODAL FIREBASE AUTH & CLOUD SYNC */}
+          <FirebaseAuthModal
+            isOpen={isAuthModalOpen}
+            onClose={() => setIsAuthModalOpen(false)}
+            currentUser={firebaseUser}
+            onAuthSuccess={(user) => {
+              setFirebaseUser(user);
+              showToast(`Selamat datang, ${user.displayName || user.email || 'Pengguna Cloud'}!`);
+            }}
+          />
 
           {/* MODAL BUAT PROFIL BARU */}
           {isNewProfileModalOpen && (
